@@ -53,7 +53,7 @@ Set `GITHUB_TOKEN` in your environment or CI secrets.
 **2. Install**
 
 ```bash
-npm install @maichess/platform-protos @grpc/grpc-js
+npm install @maichess/platform-protos @grpc/grpc-js @bufbuild/protobuf
 ```
 
 `@grpc/grpc-js` is a peer dependency and must be installed alongside the package.

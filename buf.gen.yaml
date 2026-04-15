@@ -1,0 +1,25 @@
+version: v2
+
+inputs:
+  - directory: protos
+
+plugins:
+  # TypeScript — ts-proto (grpc-js compatible)
+  - remote: buf.build/community/stephenh-ts-proto
+    out: gen/ts
+    opt:
+      - esModuleInterop=true
+      - outputServices=grpc-js
+      - useOptionals=messages
+
+  # Scala — ScalaPB
+  - remote: buf.build/community/scalapb-scala
+    out: gen/scala
+
+  # C# — protobuf message classes
+  - remote: buf.build/protocolbuffers/csharp
+    out: gen/csharp
+
+  # C# — gRPC service stubs
+  - remote: buf.build/grpc/csharp
+    out: gen/csharp

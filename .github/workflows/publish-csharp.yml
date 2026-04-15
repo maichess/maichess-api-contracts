@@ -1,0 +1,34 @@
+name: Publish C# package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish-csharp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Pack
+        working-directory: dotnet
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          dotnet pack --configuration Release -p:Version="$VERSION" --output nupkgs
+
+      - name: Publish to GitHub Packages
+        working-directory: dotnet
+        run: |
+          dotnet nuget push "nupkgs/*.nupkg" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
+            --source "https://nuget.pkg.github.com/maichess/index.json"

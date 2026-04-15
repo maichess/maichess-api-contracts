@@ -25,6 +25,15 @@ The repository is hosted on GitHub and should publish packages with generated co
 buf lint                                        # lint all proto files
 buf breaking --against '.git#branch=main'       # check for breaking changes
 buf generate                                    # generate code into gen/ts, gen/scala, gen/csharp
+buf generate --template buf.gen.ts.yaml         # generate TypeScript only (used by CI)
+
+# Scala (run from sbt/)
+cd sbt && sbt compile                           # verify proto compilation
+cd sbt && sbt publish                           # publish to GitHub Packages (requires GITHUB_TOKEN)
+
+# C# (run from dotnet/)
+cd dotnet && dotnet build                       # verify proto compilation
+cd dotnet && dotnet pack -p:Version=<ver>       # produce .nupkg
 ```
 
 ## Protobuf conventions

@@ -1,0 +1,45 @@
+name: Publish TypeScript package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish-ts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@maichess'
+
+      - name: Set up Buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Generate TypeScript
+        run: buf generate --template buf.gen.ts.yaml
+
+      - name: Prepare package
+        run: |
+          cp npm/package.json gen/ts/package.json
+          cp npm/tsconfig.json gen/ts/tsconfig.json
+          cd gen/ts
+          npm pkg set version="${GITHUB_REF_NAME#v}"
+          npm install
+          npx tsc --noEmit false
+
+      - name: Publish
+        run: npm publish gen/ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

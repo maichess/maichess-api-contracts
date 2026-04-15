@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageId>Maichess.PlatformProtos</PackageId>
+    <Version>0.0.0</Version>
+    <Authors>maichess</Authors>
+    <Description>Generated C# gRPC client and server stubs for maichess services</Description>
+    <RepositoryUrl>https://github.com/maichess/maichess-api-contracts</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Runtime dependencies shipped with the package -->
+    <PackageReference Include="Google.Protobuf" Version="3.34.1" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
+
+    <!-- Build-only: drives protoc code generation, not included in the package -->
+    <PackageReference Include="Grpc.Tools" Version="2.80.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      ProtoRoot must be set when protos live outside the project directory so that
+      protoc receives the correct -I include path.
+      Link controls how the files appear in IDEs (virtual folder, not copied).
+      GrpcServices="Both" generates client stubs and server base classes.
+    -->
+    <Protobuf Include="../protos/**/*.proto"
+              ProtoRoot="../protos"
+              Link="Protos/%(RecursiveDir)%(Filename)%(Extension)"
+              GrpcServices="Both" />
+  </ItemGroup>
+
+</Project>

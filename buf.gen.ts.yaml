@@ -1,0 +1,12 @@
+version: v2
+
+inputs:
+  - directory: protos
+
+plugins:
+  - remote: buf.build/community/stephenh-ts-proto
+    out: gen/ts
+    opt:
+      - esModuleInterop=true
+      - outputServices=grpc-js
+      - useOptionals=messages

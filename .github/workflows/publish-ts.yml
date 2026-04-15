@@ -40,6 +40,6 @@ jobs:
           npx tsc --noEmit false
 
       - name: Publish
-        run: npm publish gen/ts
+        run: npm publish ./gen/ts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

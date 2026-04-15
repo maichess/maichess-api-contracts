@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package maichess.match_manager.v1;
+
+option csharp_namespace = "Maichess.MatchManager.V1";
+option java_multiple_files = true;
+option java_package = "maichess.matchmanager.v1";
+
+// Matches manages the lifecycle and state of individual chess matches.
+service Matches {
+  // GetMatch returns the current state of a match.
+  rpc GetMatch(GetMatchRequest) returns (GetMatchResponse);
+
+  // MakeMove applies a move to the match on behalf of the calling user.
+  rpc MakeMove(MakeMoveRequest) returns (MakeMoveResponse);
+
+  // ResignMatch forfeits the match on behalf of the calling user.
+  rpc ResignMatch(ResignMatchRequest) returns (ResignMatchResponse);
+
+  // StreamMatch streams state updates for a match in real time.
+  rpc StreamMatch(StreamMatchRequest) returns (stream MatchEvent);
+}
+
+enum MatchStatus {
+  MATCH_STATUS_UNSPECIFIED = 0;
+  MATCH_STATUS_ONGOING = 1;
+  MATCH_STATUS_WHITE_WON = 2;
+  MATCH_STATUS_BLACK_WON = 3;
+  MATCH_STATUS_DRAW = 4;
+}
+
+message Match {
+  string id = 1;
+  string white_user_id = 2;
+  string black_user_id = 3;
+  // Current board position in FEN notation.
+  string current_fen = 4;
+  MatchStatus status = 5;
+  // Full move history in UCI notation, oldest first.
+  repeated string moves = 6;
+}
+
+message GetMatchRequest {
+  string match_id = 1;
+}
+
+message GetMatchResponse {
+  Match match = 1;
+}
+
+message MakeMoveRequest {
+  string match_id = 1;
+  string user_id = 2;
+  // Move in UCI notation (e.g. "e2e4").
+  string move = 3;
+}
+
+message MakeMoveResponse {
+  Match match = 1;
+}
+
+message ResignMatchRequest {
+  string match_id = 1;
+  string user_id = 2;
+}
+
+message ResignMatchResponse {
+  Match match = 1;
+}
+
+message StreamMatchRequest {
+  string match_id = 1;
+}
+
+message MatchEvent {
+  oneof event {
+    MoveMadeEvent move_made = 1;
+    MatchEndedEvent match_ended = 2;
+  }
+}
+
+message MoveMadeEvent {
+  string move = 1;
+  string resulting_fen = 2;
+}
+
+message MatchEndedEvent {
+  MatchStatus status = 1;
+}

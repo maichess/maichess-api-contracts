@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package maichess.auth.v1;
+
+option csharp_namespace = "Maichess.Auth.V1";
+option java_multiple_files = true;
+option java_package = "maichess.auth.v1";
+
+// Auth handles account registration, login, and token lifecycle.
+service Auth {
+  // Register creates a new player account.
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Login authenticates a player and returns a token pair.
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // RefreshToken exchanges a valid refresh token for a new token pair.
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+
+  // Logout invalidates the given refresh token.
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+message RegisterRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message RegisterResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutResponse {}

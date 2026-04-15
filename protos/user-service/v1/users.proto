@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package maichess.user.v1;
+
+option csharp_namespace = "Maichess.User.V1";
+option java_multiple_files = true;
+option java_package = "maichess.user.v1";
+
+// Users manages player profiles and statistics.
+service Users {
+  // GetUser returns a player's profile.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // UpdateUser updates a player's mutable profile fields.
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  // Current ELO rating.
+  int32 elo = 3;
+  int32 wins = 4;
+  int32 losses = 5;
+  int32 draws = 6;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  string username = 2;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}

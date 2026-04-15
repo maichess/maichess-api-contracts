@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package maichess.engine.v1;
+
+option csharp_namespace = "Maichess.Engine.V1";
+option java_multiple_files = true;
+option java_package = "maichess.engine.v1";
+
+// Bots provides access to chess engine bots of varying strength.
+service Bots {
+  // GetBestMove returns the engine's best move for the given position.
+  rpc GetBestMove(GetBestMoveRequest) returns (GetBestMoveResponse);
+
+  // ListBots returns all available bots.
+  rpc ListBots(ListBotsRequest) returns (ListBotsResponse);
+}
+
+message GetBestMoveRequest {
+  // Board position in FEN notation.
+  string fen = 1;
+  // ID of the bot to use.
+  string bot_id = 2;
+}
+
+message GetBestMoveResponse {
+  // Chosen move in UCI notation (e.g. "e2e4", "e7e8q").
+  string move = 1;
+  // Position evaluation in centipawns from the moving side's perspective.
+  int32 evaluation_cp = 2;
+}
+
+message Bot {
+  string id = 1;
+  string name = 2;
+  // Approximate ELO rating.
+  int32 elo = 3;
+}
+
+message ListBotsRequest {}
+
+message ListBotsResponse {
+  repeated Bot bots = 1;
+}

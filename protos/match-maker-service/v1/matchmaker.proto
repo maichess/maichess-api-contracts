@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package maichess.match_maker.v1;
+
+option csharp_namespace = "Maichess.MatchMaker.V1";
+option java_multiple_files = true;
+option java_package = "maichess.matchmaker.v1";
+
+// MatchMaker queues players and pairs them into matches.
+service MatchMaker {
+  // QueueForMatch enters the matchmaking queue and streams status updates
+  // until a match is found or the request is cancelled.
+  rpc QueueForMatch(QueueForMatchRequest) returns (stream QueueUpdate);
+
+  // CancelQueue removes the player from the matchmaking queue.
+  rpc CancelQueue(CancelQueueRequest) returns (CancelQueueResponse);
+}
+
+enum TimeControl {
+  TIME_CONTROL_UNSPECIFIED = 0;
+  TIME_CONTROL_BULLET = 1;
+  TIME_CONTROL_BLITZ = 2;
+  TIME_CONTROL_RAPID = 3;
+  TIME_CONTROL_CLASSICAL = 4;
+}
+
+message QueueForMatchRequest {
+  string user_id = 1;
+  TimeControl time_control = 2;
+}
+
+// QueueUpdate is streamed to the client while they are in the queue.
+message QueueUpdate {
+  oneof event {
+    QueuedEvent queued = 1;
+    MatchFoundEvent match_found = 2;
+  }
+}
+
+// QueuedEvent is sent when the player is successfully placed in the queue.
+message QueuedEvent {
+  int32 estimated_wait_seconds = 1;
+}
+
+// MatchFoundEvent is sent when an opponent has been matched.
+message MatchFoundEvent {
+  string match_id = 1;
+}
+
+message CancelQueueRequest {
+  string user_id = 1;
+}
+
+message CancelQueueResponse {}

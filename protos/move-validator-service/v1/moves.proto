@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package maichess.move_validator.v1;
+
+option csharp_namespace = "Maichess.MoveValidator.V1";
+option java_multiple_files = true;
+option java_package = "maichess.movevalidator.v1";
+
+// Moves validates chess moves and enumerates legal moves for a given position.
+service Moves {
+  // ValidateMove checks whether a move is legal in the given position.
+  rpc ValidateMove(ValidateMoveRequest) returns (ValidateMoveResponse);
+
+  // GetLegalMoves returns all legal moves for the given position.
+  rpc GetLegalMoves(GetLegalMovesRequest) returns (GetLegalMovesResponse);
+}
+
+message ValidateMoveRequest {
+  // Board position in FEN notation.
+  string fen = 1;
+  // Move to validate in UCI notation (e.g. "e2e4").
+  string move = 2;
+}
+
+message ValidateMoveResponse {
+  bool valid = 1;
+  // Human-readable reason if the move is invalid.
+  string reason = 2;
+  // Resulting position in FEN notation, only set when valid is true.
+  string resulting_fen = 3;
+}
+
+message GetLegalMovesRequest {
+  // Board position in FEN notation.
+  string fen = 1;
+}
+
+message GetLegalMovesResponse {
+  // All legal moves in UCI notation.
+  repeated string moves = 1;
+}

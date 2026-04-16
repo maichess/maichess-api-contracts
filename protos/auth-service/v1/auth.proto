@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package maichess.auth.v1;
+
+option csharp_namespace = "Maichess.Auth.V1";
+option java_multiple_files = true;
+option java_package = "maichess.auth.v1";
+
+// Auth exposes token validation for internal service-to-service use.
+// Register, Login, Refresh, and Logout are REST-only and defined in
+// api-contracts/rest/auth.md.
+service Auth {
+  // ValidateToken checks whether an access token is valid and not revoked.
+  // Other services call this to authenticate incoming requests without
+  // trusting the JWT signature alone (enables server-side revocation).
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  // Set when valid is true.
+  string user_id = 2;
+  string username = 3;
+}

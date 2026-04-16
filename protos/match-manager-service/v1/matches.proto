@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package maichess.match_manager.v1;
+
+option csharp_namespace = "Maichess.MatchManager.V1";
+option java_multiple_files = true;
+option java_package = "maichess.matchmanager.v1";
+
+// Matches instantiates and manages chess match state.
+// CreateMatch is called by Match Maker; all other RPCs are used internally
+// and reflected back to clients via the Match Manager REST API.
+service Matches {
+  // CreateMatch is called by Match Maker once an opponent has been found.
+  rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
+
+  // GetMatch returns the current state of a match.
+  rpc GetMatch(GetMatchRequest) returns (GetMatchResponse);
+
+  // MakeMove applies a validated move to a match.
+  rpc MakeMove(MakeMoveRequest) returns (MakeMoveResponse);
+
+  // ResignMatch forfeits the match on behalf of a player.
+  rpc ResignMatch(ResignMatchRequest) returns (ResignMatchResponse);
+
+  // StreamMatch streams real-time match events to the caller.
+  rpc StreamMatch(StreamMatchRequest) returns (stream MatchEvent);
+}
+
+// Player represents either a human user or a bot on one side of the board.
+message Player {
+  oneof identity {
+    string user_id = 1;
+    string bot_id = 2;
+  }
+}
+
+enum TimeControl {
+  TIME_CONTROL_UNSPECIFIED = 0;
+  TIME_CONTROL_BULLET = 1;    // ≤ 3 min
+  TIME_CONTROL_BLITZ = 2;     // 3–10 min
+  TIME_CONTROL_RAPID = 3;     // 10–60 min
+  TIME_CONTROL_CLASSICAL = 4; // > 60 min
+}
+
+enum MatchStatus {
+  MATCH_STATUS_UNSPECIFIED = 0;
+  MATCH_STATUS_ONGOING = 1;
+  MATCH_STATUS_WHITE_WON = 2;
+  MATCH_STATUS_BLACK_WON = 3;
+  MATCH_STATUS_DRAW = 4;
+}
+
+enum EndReason {
+  END_REASON_UNSPECIFIED = 0;
+  END_REASON_CHECKMATE = 1;
+  END_REASON_RESIGNATION = 2;
+  END_REASON_STALEMATE = 3;
+  END_REASON_TIMEOUT = 4;
+  END_REASON_DRAW_AGREEMENT = 5;
+}
+
+message Match {
+  string id = 1;
+  Player white = 2;
+  Player black = 3;
+  // Current board position in FEN notation.
+  string current_fen = 4;
+  MatchStatus status = 5;
+  // Full move history in UCI notation, oldest first.
+  repeated string moves = 6;
+  TimeControl time_control = 7;
+  // Remaining clock time in milliseconds for each side.
+  int64 white_time_ms = 8;
+  int64 black_time_ms = 9;
+}
+
+message CreateMatchRequest {
+  Player white = 1;
+  Player black = 2;
+  TimeControl time_control = 3;
+}
+
+message CreateMatchResponse {
+  Match match = 1;
+}
+
+message GetMatchRequest {
+  string match_id = 1;
+}
+
+message GetMatchResponse {
+  Match match = 1;
+}
+
+message MakeMoveRequest {
+  string match_id = 1;
+  string user_id = 2;
+  // Move in UCI notation.
+  string move = 3;
+}
+
+message MakeMoveResponse {
+  Match match = 1;
+}
+
+message ResignMatchRequest {
+  string match_id = 1;
+  string user_id = 2;
+}
+
+message ResignMatchResponse {
+  Match match = 1;
+}
+
+message StreamMatchRequest {
+  string match_id = 1;
+}
+
+message MatchEvent {
+  oneof event {
+    MoveMadeEvent move_made = 1;
+    MatchEndedEvent match_ended = 2;
+  }
+}
+
+message MoveMadeEvent {
+  string move = 1;
+  string resulting_fen = 2;
+  Player player = 3;
+  int64 white_time_ms = 4;
+  int64 black_time_ms = 5;
+}
+
+message MatchEndedEvent {
+  MatchStatus status = 1;
+  EndReason reason = 2;
+}

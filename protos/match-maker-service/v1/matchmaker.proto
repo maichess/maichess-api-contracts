@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package maichess.match_maker.v1;
+
+option csharp_namespace = "Maichess.MatchMaker.V1";
+option java_multiple_files = true;
+option java_package = "maichess.matchmaker.v1";
+
+// Match Maker exposes no gRPC service.
+//
+// It is a pure gRPC client: once a human opponent is found or a bot match is
+// requested, it calls Matches.CreateMatch on Match Manager and returns the
+// resulting match_id to the client via its REST API.
+//
+// The Match Maker REST contract is defined in api-contracts/rest/match-maker.md.

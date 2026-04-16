@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package maichess.user.v1;
+
+option csharp_namespace = "Maichess.User.V1";
+option java_multiple_files = true;
+option java_package = "maichess.user.v1";
+
+// Users manages player profiles.
+// CreateUser and GetUser are called by Auth; GetUser and UpdateUser are also
+// exposed via the User Service REST API.
+service Users {
+  // CreateUser creates a new player profile. Called by Auth on registration.
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+
+  // GetUser returns a player's profile.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // UpdateUser updates mutable profile fields.
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  int32 elo = 3;
+  int32 wins = 4;
+  int32 losses = 5;
+  int32 draws = 6;
+}
+
+message CreateUserRequest {
+  string username = 1;
+  // Password hash — Auth is responsible for hashing before calling this RPC.
+  string password_hash = 2;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  string username = 2;
+}
+
+message UpdateUserResponse {
+  User user = 1;
+}

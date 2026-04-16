@@ -24,6 +24,11 @@ service Matches {
 
   // StreamMatch streams real-time match events to the caller.
   rpc StreamMatch(StreamMatchRequest) returns (stream MatchEvent);
+
+  // GetMatchPosition returns the board state at a specific point in the move
+  // history. Available for matches where at least one side is a bot, and for
+  // any match that has ended. Used to power the analysis navigation UI.
+  rpc GetMatchPosition(GetMatchPositionRequest) returns (GetMatchPositionResponse);
 }
 
 // Player represents either a human user or a bot on one side of the board.
@@ -134,4 +139,21 @@ message MoveMadeEvent {
 message MatchEndedEvent {
   MatchStatus status = 1;
   EndReason reason = 2;
+}
+
+message GetMatchPositionRequest {
+  string match_id = 1;
+  // 0 = starting position; N = position after the N-th move.
+  int32 index = 2;
+}
+
+message GetMatchPositionResponse {
+  int32 index = 1;
+  // Board state in FEN notation at this index.
+  string fen = 2;
+  // The move that was played to reach this position (UCI notation).
+  // Empty when index is 0.
+  string move = 3;
+  // True when this index equals the current live game position.
+  bool is_current = 4;
 }

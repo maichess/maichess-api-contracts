@@ -5,19 +5,15 @@
 
 Manages public player profiles and statistics. Profile creation is handled internally via gRPC by Auth on registration — there is no public `POST /users` endpoint.
 
+The authenticated user's identity is always inferred from the `access_token` cookie set by the Auth service. No user ID is accepted in the URL.
+
 ---
 
-## GET /users/{id}
+## GET /users/me
 
-Return a player's public profile.
+Return the authenticated user's profile.
 
-**Auth:** Bearer token
-
-**Path parameters**
-
-| Name | Type | Description |
-|---|---|---|
-| `id` | UUID | User ID |
+**Auth:** `access_token` cookie
 
 **`200 OK`**
 ```json
@@ -32,21 +28,14 @@ Return a player's public profile.
 ```
 
 **`401 Unauthorized`**
-**`404 Not Found`** — user does not exist
 
 ---
 
-## PATCH /users/{id}
+## PATCH /users/me
 
-Update mutable profile fields. The authenticated user may only update their own profile.
+Update mutable fields on the authenticated user's profile.
 
-**Auth:** Bearer token (must match `id`)
-
-**Path parameters**
-
-| Name | Type | Description |
-|---|---|---|
-| `id` | UUID | User ID |
+**Auth:** `access_token` cookie
 
 **Request body** — all fields optional; at least one required
 
@@ -60,10 +49,8 @@ Update mutable profile fields. The authenticated user may only update their own 
 }
 ```
 
-**`200 OK`** — updated User object (same schema as `GET /users/{id}`)
+**`200 OK`** — updated User object (same schema as `GET /users/me`)
 
 **`401 Unauthorized`**
-**`403 Forbidden`** — token belongs to a different user
-**`404 Not Found`** — user does not exist
 **`409 Conflict`** — username already taken
 **`422 Unprocessable Entity`** — validation failed

@@ -1,0 +1,26 @@
+type: http_request
+model: http_request
+id: rq_CUxuBqC48n
+createdAt: 2026-04-19T11:49:10.843631
+updatedAt: 2026-04-19T11:51:31.639072
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_xCEg2TYS9A
+authentication: {}
+authenticationType: null
+body: {}
+bodyType: null
+description: ''
+headers:
+- enabled: true
+  name: User-Agent
+  value: yaak
+  id: null
+- enabled: true
+  name: Accept
+  value: '*/*'
+  id: null
+method: POST
+name: Refresh Token
+sortPriority: 2000.0
+url: ${[ AUTH_SERVICE_BASE_URL ]}/auth/refresh
+urlParameters: []

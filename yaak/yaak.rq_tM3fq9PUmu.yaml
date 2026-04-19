@@ -1,0 +1,26 @@
+type: http_request
+model: http_request
+id: rq_tM3fq9PUmu
+createdAt: 2026-04-19T11:56:34.694909
+updatedAt: 2026-04-19T11:57:05.220750
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_XhFi3M5PLh
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    {
+      "username": "tom"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: 5j2IhF4zfQ
+method: PATCH
+name: ''
+sortPriority: 2000.0
+url: ${[ USERS_SERVICE_BASE_URL ]}/users/me
+urlParameters: []

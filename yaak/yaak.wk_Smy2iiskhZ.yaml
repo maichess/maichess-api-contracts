@@ -1,0 +1,15 @@
+type: workspace
+model: workspace
+id: wk_Smy2iiskhZ
+createdAt: 2026-04-19T11:48:08.383278
+updatedAt: 2026-04-19T11:48:10.233100
+authentication: {}
+authenticationType: null
+description: ''
+headers: []
+name: maichess
+encryptionKeyChallenge: eUE0azNuQwFNDnXUiviyHjxbEl0YQ3VHJeUWmuLapxIOGmNQm7VGNiwTaYQeiGSgKp1/x1AUpTLfh9iKoDPlKQh8V8dwNNMYpImg+b/RLwxZzb+fKkT561H6asaWPV5tkII=
+settingValidateCertificates: true
+settingFollowRedirects: true
+settingRequestTimeout: 0
+settingDnsOverrides: []

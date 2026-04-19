@@ -5,6 +5,17 @@
 
 Handles account registration, credential login, and JWT token lifecycle. Access tokens are short-lived JWTs (15 min). Refresh tokens are long-lived opaque UUIDs stored server-side (30 days). On registration, Auth calls `Users.CreateUser` via gRPC.
 
+Tokens are delivered and consumed exclusively via HttpOnly cookies — never in response or request bodies. This allows them to be shared across subdomains by setting `COOKIE_DOMAIN=.yourdomain.com` on the auth service.
+
+## Cookies
+
+| Cookie | Path | MaxAge | Description |
+|---|---|---|---|
+| `access_token` | `/` | 15 min | Signed JWT; sent to all services |
+| `refresh_token` | `/auth` | 30 days | Opaque UUID; only sent back to auth service endpoints |
+
+Both cookies are `HttpOnly`, `SameSite=Lax`. `Secure` is enabled when `NODE_ENV=production` or `COOKIE_SECURE=true`. Domain is set via `COOKIE_DOMAIN` env var (optional; omit for localhost).
+
 ---
 
 ## POST /auth/register
@@ -30,11 +41,11 @@ Create a new account.
 **`201 Created`**
 ```json
 {
-  "user_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "d4f9a1e2-0b3c-4d6e-8f7a-9b0c1d2e3f4a"
+  "user_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
 }
 ```
+
+Sets `access_token` and `refresh_token` cookies.
 
 **`409 Conflict`** — username already taken
 **`422 Unprocessable Entity`** — validation failed
@@ -64,11 +75,11 @@ Authenticate with username and password.
 **`200 OK`**
 ```json
 {
-  "user_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "d4f9a1e2-0b3c-4d6e-8f7a-9b0c1d2e3f4a"
+  "user_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
 }
 ```
+
+Sets `access_token` and `refresh_token` cookies.
 
 **`401 Unauthorized`** — incorrect credentials
 
@@ -76,44 +87,28 @@ Authenticate with username and password.
 
 ## POST /auth/refresh
 
-Exchange a valid refresh token for a new token pair. The submitted refresh token is invalidated (rotation).
+Exchange the `refresh_token` cookie for a new token pair. The submitted refresh token is invalidated (rotation).
 
-**Auth:** None
+**Auth:** None — reads `refresh_token` cookie automatically
 
-**Request body**
+**Request body:** None
 
-| Field | Type | Required |
-|---|---|---|
-| `refresh_token` | string | Yes |
+**`200 OK`** — no body
 
-```json
-{
-  "refresh_token": "d4f9a1e2-0b3c-4d6e-8f7a-9b0c1d2e3f4a"
-}
-```
+Sets new `access_token` and `refresh_token` cookies. The old refresh token is invalidated.
 
-**`200 OK`**
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-}
-```
-
-**`401 Unauthorized`** — refresh token invalid or expired
+**`401 Unauthorized`** — refresh token cookie missing, invalid, or expired
 
 ---
 
 ## POST /auth/logout
 
-Invalidate a refresh token.
+Invalidate the current session.
 
-**Auth:** None
+**Auth:** None — reads `refresh_token` cookie automatically
 
-**Request body**
-
-| Field | Type | Required |
-|---|---|---|
-| `refresh_token` | string | Yes |
+**Request body:** None
 
 **`204 No Content`**
+
+Clears `access_token` and `refresh_token` cookies. If no refresh token cookie is present the request still succeeds.

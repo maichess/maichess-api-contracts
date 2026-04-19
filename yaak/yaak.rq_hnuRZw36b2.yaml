@@ -1,0 +1,35 @@
+type: http_request
+model: http_request
+id: rq_hnuRZw36b2
+createdAt: 2026-04-19T11:48:53.110139
+updatedAt: 2026-04-19T11:51:31.630554
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_xCEg2TYS9A
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    {
+      "username": "tom",
+      "password": "maichess.123"
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: User-Agent
+  value: yaak
+  id: null
+- enabled: true
+  name: Accept
+  value: '*/*'
+  id: null
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: null
+method: POST
+name: Register
+sortPriority: 0.0
+url: ${[ AUTH_SERVICE_BASE_URL ]}/auth/register
+urlParameters: []

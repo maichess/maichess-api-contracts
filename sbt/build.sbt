@@ -3,17 +3,19 @@ name         := "platform-protos"
 version      := sys.env.getOrElse("RELEASE_VERSION", "0.0.0-SNAPSHOT")
 scalaVersion := "3.3.4"
 
+val zioGrpcVersion = "0.6.3"
+
 // Proto sources live one level above the sbt subproject
 Compile / PB.protoSources := Seq(baseDirectory.value / ".." / "protos")
 Compile / PB.targets := Seq(
-  scalapb.gen(grpc = true) -> (Compile / sourceManaged).value / "scalapb"
+  scalapb.gen(grpc = false)              -> (Compile / sourceManaged).value / "scalapb",
+  scalapb.zio_grpc.ZioCodeGenerator     -> (Compile / sourceManaged).value / "scalapb",
 )
 
 libraryDependencies ++= Seq(
   // % "protobuf" makes protobuf-java available to the protoc invocation
-  "com.thesamet.scalapb" %% "scalapb-runtime"      % scalapb.compiler.Version.scalapbVersion % "protobuf",
-  // provides generated stub base traits; transitively pulls in scalapb-runtime
-  "com.thesamet.scalapb" %% "scalapb-runtime-grpc"  % scalapb.compiler.Version.scalapbVersion,
+  "com.thesamet.scalapb"          %% "scalapb-runtime"  % scalapb.compiler.Version.scalapbVersion % "protobuf",
+  "com.thesamet.scalapb.zio-grpc" %% "zio-grpc-core"    % zioGrpcVersion,
 )
 
 // GitHub Packages Maven registry

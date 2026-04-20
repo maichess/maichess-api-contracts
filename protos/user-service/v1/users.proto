@@ -4,7 +4,7 @@ package maichess.user.v1;
 
 option csharp_namespace = "Maichess.User.V1";
 option java_multiple_files = true;
-option java_package = "maichess.user.v1";
+option java_package = "maichess.user.v1.users";
 
 // Users manages player profiles.
 // CreateUser and GetUser are called by Auth; GetUser and UpdateUser are also

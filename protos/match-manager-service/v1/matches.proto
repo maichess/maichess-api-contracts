@@ -4,7 +4,7 @@ package maichess.match_manager.v1;
 
 option csharp_namespace = "Maichess.MatchManager.V1";
 option java_multiple_files = true;
-option java_package = "maichess.matchmanager.v1";
+option java_package = "maichess.match_manager.v1.matches";
 
 // Matches instantiates and manages chess match state.
 // CreateMatch is called by Match Maker; all other RPCs are used internally

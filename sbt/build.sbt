@@ -8,7 +8,7 @@ val zioGrpcVersion = "0.6.3"
 // Proto sources live one level above the sbt subproject
 Compile / PB.protoSources := Seq(baseDirectory.value / ".." / "protos")
 Compile / PB.targets := Seq(
-  scalapb.gen(grpc = false)              -> (Compile / sourceManaged).value / "scalapb",
+  scalapb.gen(grpc = true)               -> (Compile / sourceManaged).value / "scalapb",
   scalapb.zio_grpc.ZioCodeGenerator     -> (Compile / sourceManaged).value / "scalapb",
 )
 

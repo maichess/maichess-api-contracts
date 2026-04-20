@@ -4,7 +4,7 @@ package maichess.auth.v1;
 
 option csharp_namespace = "Maichess.Auth.V1";
 option java_multiple_files = true;
-option java_package = "maichess.auth.v1";
+option java_package = "maichess.auth.v1.auth";
 
 // Auth exposes token validation for internal service-to-service use.
 // Register, Login, Refresh, and Logout are REST-only and defined in

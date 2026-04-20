@@ -1,0 +1,21 @@
+type: grpc_request
+model: grpc_request
+id: gr_asaoik47Pp
+createdAt: 2026-04-20T10:10:08.105012500
+updatedAt: 2026-04-20T10:10:16.821813100
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_E3a9b7aRTy
+authenticationType: null
+authentication: {}
+description: ''
+message: |-
+  {
+    "fen": "rnb1kbnr/pppp1ppp/8/8/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 4",
+    "move": "f1e2"
+  }
+metadata: []
+method: ValidateMove
+name: ValidateMove - checkmate
+service: maichess.move_validator.v1.Moves
+sortPriority: 1000.001
+url: localhost:50055

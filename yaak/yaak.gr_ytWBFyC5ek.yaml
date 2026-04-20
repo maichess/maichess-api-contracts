@@ -1,0 +1,20 @@
+type: grpc_request
+model: grpc_request
+id: gr_ytWBFyC5ek
+createdAt: 2026-04-20T10:11:38.962955600
+updatedAt: 2026-04-20T10:11:44.686459700
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_E3a9b7aRTy
+authenticationType: null
+authentication: {}
+description: ''
+message: |-
+  {
+    "fen": "k7/8/8/8/8/8/7K/R6R b - - 0 1"
+  }
+metadata: []
+method: GetLegalMoves
+name: GetLegalMoves02
+service: maichess.move_validator.v1.Moves
+sortPriority: 2000.001
+url: localhost:50055

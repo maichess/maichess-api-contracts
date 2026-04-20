@@ -1,0 +1,20 @@
+type: grpc_request
+model: grpc_request
+id: gr_mopKasvKNv
+createdAt: 2026-04-20T10:07:37.870218300
+updatedAt: 2026-04-20T10:11:36.694269200
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_E3a9b7aRTy
+authenticationType: null
+authentication: {}
+description: ''
+message: |-
+  {
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+  }
+metadata: []
+method: GetLegalMoves
+name: GetLegalMoves01
+service: maichess.move_validator.v1.Moves
+sortPriority: 2000.0
+url: localhost:50055

@@ -134,6 +134,8 @@ message MoveMadeEvent {
   Player player = 3;
   int64 white_time_ms = 4;
   int64 black_time_ms = 5;
+  // Move index in the match history; use with GetMatchPosition for analysis navigation.
+  int32 index = 6;
 }
 
 message MatchEndedEvent {

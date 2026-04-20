@@ -14,8 +14,9 @@ Compile / PB.targets := Seq(
 
 libraryDependencies ++= Seq(
   // % "protobuf" makes protobuf-java available to the protoc invocation
-  "com.thesamet.scalapb"          %% "scalapb-runtime"  % scalapb.compiler.Version.scalapbVersion % "protobuf",
-  "com.thesamet.scalapb.zio-grpc" %% "zio-grpc-core"    % zioGrpcVersion,
+  "com.thesamet.scalapb"          %% "scalapb-runtime"      % scalapb.compiler.Version.scalapbVersion % "protobuf",
+  "com.thesamet.scalapb"          %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
+  "com.thesamet.scalapb.zio-grpc" %% "zio-grpc-core"        % zioGrpcVersion,
 )
 
 // GitHub Packages Maven registry

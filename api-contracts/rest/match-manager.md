@@ -201,7 +201,7 @@ data: { "status": "black_won", "reason": "checkmate" }
 | `move_made` | After every move, including bot moves | `move`, `resulting_fen`, `index` (use with `/positions/{index}`), `player`, `white_time_ms`, `black_time_ms` |
 | `match_ended` | When the game concludes | `status`, `reason` |
 
-`reason` is one of: `checkmate`, `resignation`, `stalemate`, `timeout`, `draw_agreement`
+`reason` is one of: `checkmate`, `resignation`, `stalemate`, `timeout`, `draw_agreement`, `fifty_move_rule`, `threefold_repetition`, `insufficient_material`
 
 **`401 Unauthorized`**
 **`404 Not Found`**

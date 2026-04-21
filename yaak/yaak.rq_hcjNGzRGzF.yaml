@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_hcjNGzRGzF
+createdAt: 2026-04-21T15:59:25.221926
+updatedAt: 2026-04-21T16:00:32.852696
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_LTJvPG9N68
+authentication: {}
+authenticationType: null
+body:
+  text: "{\n  \"move\": \"f1d3\" \n}"
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: IU5GPRde2m
+method: POST
+name: Make Move
+sortPriority: 1000.0
+url: ${[ MATCH_MANAGER_SERVICE_BASE_URL ]}/matches/a5395513-5458-4332-b500-a7cb6d60edf9/moves
+urlParameters: []

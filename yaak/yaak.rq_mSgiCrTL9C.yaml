@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_mSgiCrTL9C
 createdAt: 2026-04-21T13:46:32.807011
-updatedAt: 2026-04-21T13:52:48.598275
+updatedAt: 2026-04-21T14:53:29.203426
 workspaceId: wk_Smy2iiskhZ
 folderId: fl_DzsqBvogMg
 authentication: {}
@@ -10,8 +10,8 @@ authenticationType: null
 body:
   text: |-
     {
-      "time_control": "blitz",
-      "opponent": { "type": "human" }
+      "time_control": "classical",
+      "opponent": { "type": "bot", "bot_id": "classical" }
     }
 bodyType: application/json
 description: ''

@@ -3,7 +3,7 @@
 **Base URL:** `http://match-maker-service`
 **Implementation:** ASP.NET
 
-Handles session initialisation. For human opponents the service queues the player and waits for a peer; for bot opponents it resolves immediately. In both cases, once an opponent is found, Match Maker calls `Matches.CreateMatch` on Match Manager via gRPC and streams the resulting `match_id` back to the client via SSE.
+Handles session initialisation. For human opponents the service queues the player and waits for a peer; for bot opponents it resolves immediately. In both cases, once an opponent is found, Match Maker calls `Matches.CreateMatch` on Match Manager via gRPC and makes the resulting `match_id` available via a polling endpoint.
 
 ---
 
@@ -48,9 +48,9 @@ Bot opponent:
 
 ---
 
-## GET /queue/{queue_token}/events
+## GET /queue/{queue_token}/status
 
-Stream queue status via Server-Sent Events. Hold the connection open until a `match_found` event is received or the client calls `DELETE /queue/{queue_token}`.
+Poll the current queue status. Clients should call this endpoint repeatedly until `status` is `matched`.
 
 **Auth:** Bearer token
 
@@ -60,20 +60,22 @@ Stream queue status via Server-Sent Events. Hold the connection open until a `ma
 |---|---|---|
 | `queue_token` | UUID | Token returned by `POST /queue` |
 
-**Response:** `Content-Type: text/event-stream`
+**`200 OK`**
 
-```
-event: queued
-data: {"estimated_wait_seconds": 45}
-
-event: match_found
-data: {"match_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"}
-```
-
-| Event | When | Fields |
+| Field | Type | Description |
 |---|---|---|
-| `queued` | Once, immediately after joining | `estimated_wait_seconds` (0 for bot matches) |
-| `match_found` | When an opponent is paired and a match has been created | `match_id` |
+| `status` | string | `waiting` or `matched` |
+| `match_id` | string \| null | Present once `status` is `matched` |
+
+While waiting:
+```json
+{ "status": "waiting", "match_id": null }
+```
+
+Once matched:
+```json
+{ "status": "matched", "match_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }
+```
 
 **`401 Unauthorized`**
 **`404 Not Found`** — queue token does not exist or belongs to a different user

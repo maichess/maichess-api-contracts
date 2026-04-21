@@ -1,0 +1,18 @@
+type: http_request
+model: http_request
+id: rq_Rniny5VPCu
+createdAt: 2026-04-21T15:58:49.073748
+updatedAt: 2026-04-21T15:59:22.830976
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_LTJvPG9N68
+authentication: {}
+authenticationType: null
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: Get Legal Moves
+sortPriority: 1000.0
+url: ${[ MATCH_MANAGER_SERVICE_BASE_URL ]}/matches/a5395513-5458-4332-b500-a7cb6d60edf9/legal-moves
+urlParameters: []

@@ -1,0 +1,18 @@
+type: http_request
+model: http_request
+id: rq_WyFq5s7nUw
+createdAt: 2026-04-21T15:56:24.894193
+updatedAt: 2026-04-21T15:57:34.107265
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_DzsqBvogMg
+authentication: {}
+authenticationType: null
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: Get Queue Status
+sortPriority: 1000.0
+url: ${[ MATCH_MAKER_SERVICE_BASE_URL ]}/queue/1f4199e1-6753-45d2-88cd-d9622befbeb6/status
+urlParameters: []

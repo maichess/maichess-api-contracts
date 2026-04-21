@@ -1,0 +1,27 @@
+type: http_request
+model: http_request
+id: rq_mSgiCrTL9C
+createdAt: 2026-04-21T13:46:32.807011
+updatedAt: 2026-04-21T13:52:48.598275
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_DzsqBvogMg
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    {
+      "time_control": "blitz",
+      "opponent": { "type": "human" }
+    }
+bodyType: application/json
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: application/json
+  id: 7nArxXtyfs
+method: POST
+name: Join Queue
+sortPriority: 1000.0
+url: ${[ MATCH_MAKER_SERVICE_BASE_URL ]}/queue
+urlParameters: []

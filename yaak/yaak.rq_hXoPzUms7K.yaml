@@ -1,0 +1,22 @@
+type: http_request
+model: http_request
+id: rq_hXoPzUms7K
+createdAt: 2026-04-21T13:52:56.873619
+updatedAt: 2026-04-21T14:00:58.695687
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_DzsqBvogMg
+authentication: {}
+authenticationType: null
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: DELETE
+name: Leave Queue
+sortPriority: 1000.0
+url: ${[ MATCH_MAKER_SERVICE_BASE_URL ]}/queue/1fa88e9c-35c1-4552-bd96-c143ab4d01b6
+urlParameters:
+- enabled: true
+  name: ''
+  value: ''
+  id: SSJuCsCst2

@@ -128,6 +128,8 @@ message MatchEvent {
   oneof event {
     MoveMadeEvent move_made = 1;
     MatchEndedEvent match_ended = 2;
+    DrawOfferedEvent draw_offered = 3;
+    DrawDeclinedEvent draw_declined = 4;
   }
 }
 
@@ -144,6 +146,16 @@ message MoveMadeEvent {
 message MatchEndedEvent {
   MatchStatus status = 1;
   EndReason reason = 2;
+}
+
+message DrawOfferedEvent {
+  // The player who made the offer.
+  Player player = 1;
+}
+
+message DrawDeclinedEvent {
+  // The player who declined or retracted the offer.
+  Player player = 1;
 }
 
 message GetMatchPositionRequest {

@@ -167,6 +167,66 @@ Forfeit the match on behalf of the authenticated player.
 
 ---
 
+## POST /matches/{id}/draw-offer
+
+Offer a draw to the opponent. Only valid when both sides are human players.
+
+**Auth:** Bearer token — must be a participant
+
+**Path parameters**
+
+| Name | Type | Description |
+|---|---|---|
+| `id` | UUID | Match ID |
+
+**`200 OK`** — no body
+
+**`401 Unauthorized`**
+**`403 Forbidden`** — not a participant, or opponent is a bot
+**`409 Conflict`** — match has already ended, or a draw offer is already pending
+
+---
+
+## DELETE /matches/{id}/draw-offer
+
+Decline or retract the pending draw offer. The offering player may retract; the opponent may decline.
+
+**Auth:** Bearer token — must be a participant
+
+**Path parameters**
+
+| Name | Type | Description |
+|---|---|---|
+| `id` | UUID | Match ID |
+
+**`200 OK`** — no body
+
+**`401 Unauthorized`**
+**`403 Forbidden`** — not a participant
+**`409 Conflict`** — match has already ended, or no draw offer is pending
+
+---
+
+## POST /matches/{id}/draw-offer/accept
+
+Accept the pending draw offer. Only the player who received the offer may accept it.
+
+**Auth:** Bearer token — must be the recipient of the pending draw offer
+
+**Path parameters**
+
+| Name | Type | Description |
+|---|---|---|
+| `id` | UUID | Match ID |
+
+**`200 OK`** — final Match object with `status: "draw"`
+
+**`401 Unauthorized`**
+**`403 Forbidden`** — not a participant, or not the recipient of the pending offer
+**`409 Conflict`** — match has already ended, or no draw offer is pending
+
+---
+
 ## GET /matches/{id}/events
 
 Stream real-time match events via Server-Sent Events. Delivers opponent moves (including bot moves) and match end notifications.
@@ -194,12 +254,20 @@ data: {
 
 event: match_ended
 data: { "status": "black_won", "reason": "checkmate" }
+
+event: draw_offered
+data: { "player": { "user_id": "3f2504e0-..." } }
+
+event: draw_declined
+data: { "player": { "user_id": "9a8b7c6d-..." } }
 ```
 
 | Event | When | Fields |
 |---|---|---|
 | `move_made` | After every move, including bot moves | `move`, `resulting_fen`, `index` (use with `/positions/{index}`), `player`, `white_time_ms`, `black_time_ms` |
 | `match_ended` | When the game concludes | `status`, `reason` |
+| `draw_offered` | When a player offers a draw | `player` — the player who made the offer |
+| `draw_declined` | When the pending draw offer is declined or retracted | `player` — the player who declined or retracted |
 
 `reason` is one of: `checkmate`, `resignation`, `stalemate`, `timeout`, `draw_agreement`, `fifty_move_rule`, `threefold_repetition`, `insufficient_material`
 

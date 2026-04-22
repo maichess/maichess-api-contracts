@@ -21,10 +21,11 @@ message ValidateMoveRequest {
   string fen = 1;
   // Proposed move in UCI notation (e.g. "e2e4").
   string move = 2;
-  // Sequence of FEN strings for all positions reached since the last pawn move
-  // or capture, in game order. Owned exclusively by the move validator — callers
-  // must pass back the list returned by the previous ValidateMoveResponse unchanged.
-  // Empty on the first call or after any irreversible move (pawn move / capture).
+  // Sequence of position keys (first four space-separated FEN fields: pieces,
+  // side-to-move, castling, en-passant) for all positions reached since the last
+  // pawn move or capture, in game order. Owned exclusively by the move validator —
+  // callers must pass back the list returned by the previous ValidateMoveResponse
+  // unchanged. Empty on the first call or after any irreversible move.
   repeated string position_history = 3;
 }
 

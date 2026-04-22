@@ -21,6 +21,11 @@ message ValidateMoveRequest {
   string fen = 1;
   // Proposed move in UCI notation (e.g. "e2e4").
   string move = 2;
+  // Sequence of FEN strings for all positions reached since the last pawn move
+  // or capture, in game order. Owned exclusively by the move validator — callers
+  // must pass back the list returned by the previous ValidateMoveResponse unchanged.
+  // Empty on the first call or after any irreversible move (pawn move / capture).
+  repeated string position_history = 3;
 }
 
 message ValidateMoveResponse {
@@ -31,6 +36,11 @@ message ValidateMoveResponse {
   string resulting_fen = 3;
   // Win condition reached after this move, if any.
   GameResult game_result = 4;
+  // Updated position history to be stored by the caller and passed back on the
+  // next request. Only set when valid is true. The move validator is the sole
+  // authority over this list — callers must not modify it. Discard once
+  // game_result indicates the game has ended.
+  repeated string position_history = 5;
 }
 
 enum GameResult {

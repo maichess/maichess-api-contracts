@@ -14,6 +14,10 @@ service Bots {
 
   // ListBots returns all available bot identifiers and metadata.
   rpc ListBots(ListBotsRequest) returns (ListBotsResponse);
+
+  // AnalyzePosition streams progressively deeper multi-line evaluations until
+  // the engine decides to stop (depth or improvement threshold — engine-internal).
+  rpc AnalyzePosition(AnalyzePositionRequest) returns (stream AnalysisUpdate);
 }
 
 message GetBestMoveRequest {
@@ -21,6 +25,8 @@ message GetBestMoveRequest {
   string fen = 1;
   // Which bot logic to use.
   string bot_id = 2;
+  // Time available for thinking in milliseconds. Absent means no time limit.
+  optional uint32 time_limit_ms = 3;
 }
 
 message GetBestMoveResponse {
@@ -41,4 +47,32 @@ message ListBotsRequest {}
 
 message ListBotsResponse {
   repeated Bot bots = 1;
+}
+
+message AnalyzePositionRequest {
+  // Position to analyze in FEN notation.
+  string fen = 1;
+  // Which bot logic to use.
+  string bot_id = 2;
+  // Number of best lines (principal variations) to evaluate simultaneously.
+  // Must be >= 1. Equivalent to UCI MultiPV.
+  uint32 line_count = 3;
+}
+
+// One principal variation emitted as part of an AnalysisUpdate.
+message PrincipalVariation {
+  // Rank of this line among all evaluated lines (1 = best).
+  uint32 rank = 1;
+  // Evaluation in centipawns from the moving side's perspective.
+  int32 evaluation_cp = 2;
+  // Sequence of moves for this line in UCI notation (e.g. ["e2e4", "e7e5", "g1f3"]).
+  repeated string moves = 3;
+}
+
+// Streamed once per completed search depth. Contains all evaluated lines at that depth.
+message AnalysisUpdate {
+  // Search depth just completed.
+  uint32 depth = 1;
+  // All evaluated lines at this depth, ordered by rank (best first).
+  repeated PrincipalVariation lines = 2;
 }

@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package maichess.database.v1;
+
+import "google/protobuf/struct.proto";
+
+option csharp_namespace = "Maichess.Database.V1";
+option java_multiple_files = true;
+option java_package = "maichess.database.v1.database";
+
+// Database provides generic CRUD access for a single configured domain.
+// All DB-specific query logic is encapsulated server-side; callers work
+// entirely with structured key-value records.
+//
+// Two instances are deployed:
+//   user-db   — PostgreSQL, serving User and Auth (Auth is read-only).
+//   match-db  — MongoDB, serving Match Manager.
+service Database {
+  // Get returns a single record by ID.
+  // Returns NOT_FOUND if no record with the given ID exists.
+  rpc Get(GetRequest) returns (GetResponse);
+
+  // List returns records matching all fields in the filter.
+  // Returns an empty list if no records match.
+  rpc List(ListRequest) returns (ListResponse);
+
+  // Insert creates a new record and returns it with its server-assigned ID.
+  rpc Insert(InsertRequest) returns (InsertResponse);
+
+  // Update applies partial field updates to an existing record by ID.
+  // Only fields present in `fields` are modified; others are left unchanged.
+  // Returns NOT_FOUND if no record with the given ID exists.
+  rpc Update(UpdateRequest) returns (UpdateResponse);
+
+  // Delete removes a record by ID.
+  // Returns NOT_FOUND if no record with the given ID exists.
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+}
+
+message GetRequest {
+  string collection = 1;
+  string id = 2;
+}
+
+message GetResponse {
+  google.protobuf.Struct record = 1;
+}
+
+// ListRequest retrieves records matching all specified filter fields (equality).
+message ListRequest {
+  string collection = 1;
+  // Equality filters — all specified fields must match.
+  // Omit to return all records in the collection.
+  google.protobuf.Struct filter = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListResponse {
+  repeated google.protobuf.Struct records = 1;
+}
+
+// InsertRequest adds a new record. Any `id` field in `record` is ignored;
+// the server assigns a new ID and returns the full record including it.
+message InsertRequest {
+  string collection = 1;
+  google.protobuf.Struct record = 2;
+}
+
+message InsertResponse {
+  google.protobuf.Struct record = 1;
+}
+
+// UpdateRequest applies partial field updates by ID.
+message UpdateRequest {
+  string collection = 1;
+  string id = 2;
+  google.protobuf.Struct fields = 3;
+}
+
+message UpdateResponse {
+  google.protobuf.Struct record = 1;
+}
+
+message DeleteRequest {
+  string collection = 1;
+  string id = 2;
+}
+
+message DeleteResponse {}

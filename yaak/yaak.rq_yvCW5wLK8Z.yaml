@@ -1,0 +1,18 @@
+type: http_request
+model: http_request
+id: rq_yvCW5wLK8Z
+createdAt: 2026-04-21T17:29:00.553704
+updatedAt: 2026-04-21T17:29:36.353618
+workspaceId: wk_Smy2iiskhZ
+folderId: fl_LTJvPG9N68
+authentication: {}
+authenticationType: null
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: POST
+name: Resign
+sortPriority: 1000.0
+url: ${[ MATCH_MANAGER_SERVICE_BASE_URL ]}/matches/a5395513-5458-4332-b500-a7cb6d60edf9/resign
+urlParameters: []

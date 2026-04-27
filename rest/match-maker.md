@@ -7,6 +7,24 @@ Handles session initialisation. For human opponents the service queues the playe
 
 ---
 
+## GET /bots
+
+Return all available bots.
+
+**Auth:** None
+
+**`200 OK`**
+```json
+{
+  "bots": [
+    { "id": "bullet", "name": "Bullet", "elo": 1400 },
+    { "id": "blitz", "name": "Blitz", "elo": 1700 }
+  ]
+}
+```
+
+---
+
 ## POST /queue
 
 Enter the matchmaking queue.

@@ -3,7 +3,7 @@
 **Base URL:** `http://match-manager-service`
 **Implementation:** ASP.NET
 
-Accepts player moves and serves match state. Move validation is delegated to Move Validator via gRPC; bot moves are requested from Engine via gRPC after each human ply.
+Accepts player moves and serves match state. Move validation is delegated to Move Validator via gRPC; bot moves are requested from Engine via gRPC after each human ply. Real-time events (moves, match end, draw offers) are pushed to clients via the socket service — Match Manager calls `Socket.EmitEvent` over gRPC after each state change.
 
 Player objects in responses are either a user `{"user_id": "...", "username": "..."}` or a bot `{"bot_id": "...", "name": "..."}`.
 
@@ -125,42 +125,3 @@ Forfeit the match on behalf of the authenticated player.
 **`403 Forbidden`** — not a participant
 **`409 Conflict`** — match has already ended
 
----
-
-## GET /matches/{id}/events
-
-Stream real-time match events via Server-Sent Events. Delivers opponent moves (including bot moves) and match end notifications.
-
-**Auth:** Bearer token
-
-**Path parameters**
-
-| Name | Type | Description |
-|---|---|---|
-| `id` | UUID | Match ID |
-
-**Response:** `Content-Type: text/event-stream`
-
-```
-event: move_made
-data: {
-  "move": "e7e5",
-  "resulting_fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
-  "player": { "user_id": "3f2504e0-..." },
-  "white_time_ms": 179500,
-  "black_time_ms": 178200
-}
-
-event: match_ended
-data: { "status": "black_won", "reason": "checkmate" }
-```
-
-| Event | When emitted | Fields |
-|---|---|---|
-| `move_made` | After every move, including bot moves | `move`, `resulting_fen`, `player` (`{user_id}` or `{bot_id}`), `white_time_ms`, `black_time_ms` |
-| `match_ended` | When the game concludes | `status`, `reason` |
-
-`reason` is one of: `checkmate`, `resignation`, `stalemate`, `timeout`, `draw_agreement`
-
-**`401 Unauthorized`**
-**`404 Not Found`**

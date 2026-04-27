@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package socket.v1;
+
+import "google/protobuf/struct.proto";
+
+service Socket {
+  // Called by other services to push a WebSocket event to a connected client.
+  rpc EmitEvent(EmitEventRequest) returns (EmitEventResponse);
+}
+
+message EmitEventRequest {
+  string user_id = 1;
+  string event   = 2;
+  google.protobuf.Struct payload = 3;
+}
+
+message EmitEventResponse {
+  // true if the target user had an active connection and the event was sent.
+  bool delivered = 1;
+}

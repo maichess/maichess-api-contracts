@@ -9,6 +9,8 @@ option java_package = "maichess.match_manager.v1.matches";
 // Matches instantiates and manages chess match state.
 // CreateMatch is called by Match Maker; all other RPCs are used internally
 // and reflected back to clients via the Match Manager REST API.
+// Real-time events are pushed to clients by calling Socket.EmitEvent on the
+// socket service — see MatchEvent and its variants below for payload shapes.
 service Matches {
   // CreateMatch is called by Match Maker once an opponent has been found.
   rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
@@ -21,9 +23,6 @@ service Matches {
 
   // ResignMatch forfeits the match on behalf of a player.
   rpc ResignMatch(ResignMatchRequest) returns (ResignMatchResponse);
-
-  // StreamMatch streams real-time match events to the caller.
-  rpc StreamMatch(StreamMatchRequest) returns (stream MatchEvent);
 
   // GetMatchPosition returns the board state at a specific point in the move
   // history. Available for matches where at least one side is a bot, and for
@@ -120,10 +119,9 @@ message ResignMatchResponse {
   Match match = 1;
 }
 
-message StreamMatchRequest {
-  string match_id = 1;
-}
-
+// MatchEvent and its variants define the payload shapes Match Manager sends to
+// clients via Socket.EmitEvent. The event name maps to each oneof field name
+// (e.g. "move_made", "match_ended", "draw_offered", "draw_declined").
 message MatchEvent {
   oneof event {
     MoveMadeEvent move_made = 1;

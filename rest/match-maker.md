@@ -3,7 +3,7 @@
 **Base URL:** `http://match-maker-service`
 **Implementation:** ASP.NET
 
-Handles session initialisation. For human opponents the service queues the player and waits for a peer; for bot opponents it resolves immediately. In both cases, once an opponent is found, Match Maker calls `Matches.CreateMatch` on Match Manager via gRPC and makes the resulting `match_id` available via a polling endpoint.
+Handles session initialisation. For human opponents the service queues the player and waits for a peer; for bot opponents it resolves immediately. In both cases, once an opponent is found, Match Maker calls `Matches.CreateMatch` on Match Manager via gRPC and then calls `Socket.EmitEvent` to push a `matched` event containing the `match_id` to the client.
 
 ---
 
@@ -62,43 +62,11 @@ Bot opponent:
 }
 ```
 
+The `queue_token` identifies this queue slot for cancellation. When a match is found, the socket service delivers a `matched` event to the client — see `rest/socket.md`.
+
 **`400 Bad Request`** — invalid `time_control` or unknown `bot_id`
 **`401 Unauthorized`**
 **`409 Conflict`** — player is already in the queue
-
----
-
-## GET /queue/{queue_token}/status
-
-Poll the current queue status. Clients should call this endpoint repeatedly until `status` is `matched`.
-
-**Auth:** Bearer token
-
-**Path parameters**
-
-| Name | Type | Description |
-|---|---|---|
-| `queue_token` | UUID | Token returned by `POST /queue` |
-
-**`200 OK`**
-
-| Field | Type | Description |
-|---|---|---|
-| `status` | string | `waiting` or `matched` |
-| `match_id` | string \| null | Present once `status` is `matched` |
-
-While waiting:
-```json
-{ "status": "waiting", "match_id": null }
-```
-
-Once matched:
-```json
-{ "status": "matched", "match_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }
-```
-
-**`401 Unauthorized`**
-**`404 Not Found`** — queue token does not exist or belongs to a different user
 
 ---
 

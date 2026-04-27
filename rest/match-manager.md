@@ -32,11 +32,16 @@ Return the current state of a match.
   "moves": ["e2e4"],
   "time_control": "blitz",
   "white_time_ms": 179500,
-  "black_time_ms": 180000
+  "black_time_ms": 180000,
+  "analyzable": false
 }
 ```
 
 `status` is one of: `ongoing`, `white_won`, `black_won`, `draw`
+
+`analyzable` is `true` when position navigation is available for this match: either at least one
+side is a bot, or the match has ended. The Analysis service uses this flag to determine whether
+`POST /games/from-match/{match_id}` is permitted.
 
 **`401 Unauthorized`**
 **`403 Forbidden`** — match is between other players and the requestor is not a participant

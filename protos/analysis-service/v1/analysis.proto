@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package maichess.analysis.v1;
+
+option csharp_namespace = "Maichess.Analysis.V1";
+option java_multiple_files = true;
+option java_package = "maichess.analysis.v1.analysis";
+
+// Analysis streams progressively deeper engine evaluations for a given position.
+// Called by: Analysis WebSocket Service
+service Analysis {
+  // StreamPositionAnalysis proxies AnalyzePosition from the Engine service and
+  // relays each depth update to the caller. The stream ends when the engine
+  // stops naturally (depth cap or no further improvement). Callers may cancel
+  // at any time via standard gRPC cancellation.
+  rpc StreamPositionAnalysis(StreamPositionAnalysisRequest) returns (stream PositionAnalysisUpdate);
+}
+
+message StreamPositionAnalysisRequest {
+  // Position to analyze in FEN notation.
+  string fen = 1;
+  // Which bot/engine to use for analysis.
+  string bot_id = 2;
+  // Number of best lines (principal variations) to evaluate simultaneously.
+  // Must be >= 1. Passed through as UCI MultiPV.
+  uint32 line_count = 3;
+}
+
+// Streamed once per completed search depth.
+message PositionAnalysisUpdate {
+  // Search depth just completed.
+  uint32 depth = 1;
+  // All evaluated lines at this depth, ordered by rank (best first).
+  repeated AnalysisLine lines = 2;
+}
+
+message AnalysisLine {
+  // Rank of this line among all evaluated lines (1 = best).
+  uint32 rank = 1;
+  // Evaluation in centipawns from the moving side's perspective.
+  int32 evaluation_cp = 2;
+  // Sequence of moves for this line in UCI notation (e.g. ["e2e4", "e7e5", "g1f3"]).
+  repeated string moves = 3;
+}

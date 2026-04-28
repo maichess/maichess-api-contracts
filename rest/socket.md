@@ -3,7 +3,7 @@
 **Base URL:** `ws://socket-service`
 **Implementation:** Node.js / socket.io
 
-Gateway for all real-time push events. Clients maintain a single persistent socket.io connection here. Other services (Match Manager, Match Maker) call `Socket.EmitEvent` over gRPC to deliver events to a connected user.
+Gateway for all real-time push events. Clients maintain a single persistent socket.io connection here. Other services (Match Manager, Match Maker, Analysis) call `Socket.EmitEvent` over gRPC to deliver events to a connected user.
 
 ---
 
@@ -116,3 +116,75 @@ Emitted by **Match Manager** when a draw offer is declined or retracted.
 | Field | Type | Description |
 |---|---|---|
 | `player` | object | `{ user_id }` of the player who declined or retracted the offer |
+
+---
+
+### `analysis_update`
+
+Emitted by **Analysis** once per completed engine search depth. Contains all evaluated lines at
+that depth. Multiple `analysis_update` events will arrive in sequence as the engine searches
+deeper; each supersedes the previous for the same position.
+
+The `session_id` identifies which analysis session the update belongs to. Clients should discard
+updates whose `session_id` does not match their active session.
+
+Some or all early-depth updates may arrive in rapid succession from the analysis cache; later
+depths arrive in real time from the engine.
+
+```json
+{
+  "session_id": "s-7f3a2b1c",
+  "depth": 14,
+  "lines": [
+    { "rank": 1, "evaluation_cp": 35, "moves": ["e2e4", "e7e5", "g1f3"] },
+    { "rank": 2, "evaluation_cp": 12, "moves": ["d2d4", "d7d5", "c2c4"] }
+  ]
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `session_id` | string | Analysis session identifier |
+| `depth` | number | Engine search depth completed |
+| `lines` | array | All evaluated lines at this depth, best first |
+| `lines[].rank` | number | Rank among all lines (1 = best) |
+| `lines[].evaluation_cp` | number | Evaluation in centipawns from the moving side's perspective |
+| `lines[].moves` | string[] | Principal variation in UCI notation |
+
+---
+
+### `analysis_complete`
+
+Emitted by **Analysis** when the engine terminates naturally (depth cap or no further
+improvement). Not emitted when analysis is stopped explicitly by the client.
+
+```json
+{
+  "session_id": "s-7f3a2b1c",
+  "final_depth": 22
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `session_id` | string | Analysis session identifier |
+| `final_depth` | number | Deepest depth reached |
+
+---
+
+### `analysis_error`
+
+Emitted by **Analysis** when the engine or socket service is unavailable during an analysis
+stream. The session remains alive; the client may retry by calling `POST /sessions/{id}/analysis`.
+
+```json
+{
+  "session_id": "s-7f3a2b1c",
+  "message": "engine unavailable"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `session_id` | string | Analysis session identifier |
+| `message` | string | Human-readable error description |

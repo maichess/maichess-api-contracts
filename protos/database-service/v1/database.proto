@@ -14,7 +14,7 @@ option java_package = "maichess.database.v1.database";
 //
 // Two instances are deployed:
 //   user-db   — PostgreSQL, serving User and Auth (Auth is read-only).
-//   match-db  — MongoDB, serving Match Manager.
+//   match-db  — MongoDB, serving Match Manager and Analysis.
 service Database {
   // Get returns a single record by ID.
   // Returns NOT_FOUND if no record with the given ID exists.
@@ -23,6 +23,10 @@ service Database {
   // List returns records matching all fields in the filter.
   // Returns an empty list if no records match.
   rpc List(ListRequest) returns (ListResponse);
+
+  // Count returns the number of records matching all fields in the filter.
+  // Returns 0 if no records match. Omit filter to count all records in the collection.
+  rpc Count(CountRequest) returns (CountResponse);
 
   // Insert creates a new record and returns it with its server-assigned ID.
   rpc Insert(InsertRequest) returns (InsertResponse);
@@ -35,6 +39,11 @@ service Database {
   // Delete removes a record by ID.
   // Returns NOT_FOUND if no record with the given ID exists.
   rpc Delete(DeleteRequest) returns (DeleteResponse);
+
+  // DeleteWhere removes all records in a collection matching the given filter.
+  // An empty filter deletes every record in the collection.
+  // Returns the number of deleted records.
+  rpc DeleteWhere(DeleteWhereRequest) returns (DeleteWhereResponse);
 }
 
 message GetRequest {
@@ -58,6 +67,18 @@ message ListRequest {
 
 message ListResponse {
   repeated google.protobuf.Struct records = 1;
+}
+
+// CountRequest counts records matching all specified filter fields (equality).
+message CountRequest {
+  string collection = 1;
+  // Equality filters — all specified fields must match.
+  // Omit to count all records in the collection.
+  google.protobuf.Struct filter = 2;
+}
+
+message CountResponse {
+  int64 count = 1;
 }
 
 // InsertRequest adds a new record. Any `id` field in `record` is ignored;
@@ -88,3 +109,17 @@ message DeleteRequest {
 }
 
 message DeleteResponse {}
+
+// DeleteWhereRequest removes all records matching the filter.
+// An empty filter removes all records in the collection.
+message DeleteWhereRequest {
+  string collection = 1;
+  // Equality filters — all specified fields must match.
+  // Omit (or send empty Struct) to delete all records in the collection.
+  google.protobuf.Struct filter = 2;
+}
+
+message DeleteWhereResponse {
+  // Number of records that were deleted.
+  int64 deleted_count = 1;
+}

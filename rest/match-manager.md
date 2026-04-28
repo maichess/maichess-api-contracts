@@ -43,8 +43,8 @@ Return the current state of a match.
 `last_move_at_ms` is a Unix timestamp in milliseconds indicating when the last move (or match creation) occurred. Combined with `white_time_ms` / `black_time_ms`, clients can compute the active player's current remaining time: `remaining = time_ms - (now - last_move_at_ms)`.
 
 `analyzable` is `true` when position navigation is available for this match: either at least one
-side is a bot, or the match has ended. The Analysis service uses this flag to determine whether
-`POST /games/from-match/{match_id}` is permitted.
+side is a bot, or the match has ended. Used by the client to show or hide the "Analyze" button.
+The Analysis service determines import eligibility independently by reading match-db directly.
 
 **`401 Unauthorized`**
 **`403 Forbidden`** — match is between other players and the requestor is not a participant

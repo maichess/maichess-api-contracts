@@ -7,13 +7,28 @@ option java_multiple_files = true;
 option java_package = "maichess.move_validator.v1.moves";
 
 // Moves validates chess moves and enumerates legal moves for a given position.
-// Called by: Match Manager
+// Called by: Match Manager (UCI variants), Analysis Service (SAN variants)
 service Moves {
-  // ValidateMove checks whether a move is legal and returns the resulting position.
+  // ValidateMove checks whether a UCI move is legal and returns the resulting position.
   rpc ValidateMove(ValidateMoveRequest) returns (ValidateMoveResponse);
 
-  // GetLegalMoves returns all legal moves for the given position.
+  // ValidateMoveSan checks whether a SAN move is legal and returns the resulting position
+  // plus the equivalent UCI move. Shares all logic with ValidateMove.
+  rpc ValidateMoveSan(ValidateMoveSanRequest) returns (ValidateMoveSanResponse);
+
+  // GetLegalMoves returns all legal moves for the given position in UCI notation.
   rpc GetLegalMoves(GetLegalMovesRequest) returns (GetLegalMovesResponse);
+
+  // GetLegalMovesSan returns all legal moves for the given position as (UCI, SAN) pairs.
+  // Shares all logic with GetLegalMoves.
+  rpc GetLegalMovesSan(GetLegalMovesSanRequest) returns (GetLegalMovesSanResponse);
+
+  // ConvertSequenceToSan converts a sequence of UCI moves to SAN notation in one call.
+  // Starts from starting_fen, applies each UCI move in order, and returns the SAN for
+  // each move in parallel position. Returns INVALID_ARGUMENT if any move is illegal for
+  // its position in the sequence.
+  // Called by: Analysis Service (match import PGN generation, whatif PGN export)
+  rpc ConvertSequenceToSan(ConvertSequenceToSanRequest) returns (ConvertSequenceToSanResponse);
 }
 
 message ValidateMoveRequest {
@@ -44,6 +59,30 @@ message ValidateMoveResponse {
   repeated string position_history = 5;
 }
 
+message ValidateMoveSanRequest {
+  // Current board position in FEN notation.
+  string fen = 1;
+  // Proposed move in SAN notation (e.g. "e4", "Nf3", "O-O", "e8=Q").
+  string move = 2;
+  // Same semantics as ValidateMoveRequest.position_history.
+  repeated string position_history = 3;
+}
+
+message ValidateMoveSanResponse {
+  bool valid = 1;
+  // Human-readable reason when valid is false.
+  string reason = 2;
+  // Resulting position in FEN notation; only set when valid is true.
+  string resulting_fen = 3;
+  // Win condition reached after this move, if any.
+  GameResult game_result = 4;
+  // Updated position history; same semantics as ValidateMoveResponse.position_history.
+  repeated string position_history = 5;
+  // The applied move in UCI notation (e.g. "e2e4"). Only set when valid is true.
+  // Allows callers to store the canonical UCI form after accepting a SAN move.
+  string uci_move = 6;
+}
+
 enum GameResult {
   GAME_RESULT_UNSPECIFIED = 0;
   GAME_RESULT_NONE = 1;
@@ -63,4 +102,36 @@ message GetLegalMovesRequest {
 message GetLegalMovesResponse {
   // All legal moves in UCI notation.
   repeated string moves = 1;
+}
+
+message GetLegalMovesSanRequest {
+  // Current board position in FEN notation.
+  string fen = 1;
+}
+
+message GetLegalMovesSanResponse {
+  // All legal moves as (UCI, SAN) pairs.
+  repeated LegalMove moves = 1;
+}
+
+message ConvertSequenceToSanRequest {
+  // Starting board position in FEN notation.
+  string starting_fen = 1;
+  // Ordered sequence of moves in UCI notation to convert.
+  repeated string uci_moves = 2;
+}
+
+message ConvertSequenceToSanResponse {
+  // SAN notation for each move, in the same order as uci_moves.
+  repeated string san_moves = 1;
+}
+
+// A legal move represented in both notations.
+message LegalMove {
+  // Move in UCI notation (e.g. "e2e4", "e7e8q").
+  string uci = 1;
+  // Move in Standard Algebraic Notation (e.g. "e4", "Nf3", "O-O", "e8=Q+").
+  // Includes check (+) and checkmate (#) suffixes. Disambiguation is applied
+  // when multiple pieces of the same type could reach the destination square.
+  string san = 2;
 }

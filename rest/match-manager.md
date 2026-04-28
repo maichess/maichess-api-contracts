@@ -33,11 +33,14 @@ Return the current state of a match.
   "time_control": "blitz",
   "white_time_ms": 179500,
   "black_time_ms": 180000,
+  "last_move_at_ms": 1714300000000,
   "analyzable": false
 }
 ```
 
 `status` is one of: `ongoing`, `white_won`, `black_won`, `draw`
+
+`last_move_at_ms` is a Unix timestamp in milliseconds indicating when the last move (or match creation) occurred. Combined with `white_time_ms` / `black_time_ms`, clients can compute the active player's current remaining time: `remaining = time_ms - (now - last_move_at_ms)`.
 
 `analyzable` is `true` when position navigation is available for this match: either at least one
 side is a bot, or the match has ended. The Analysis service uses this flag to determine whether

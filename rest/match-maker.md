@@ -17,8 +17,8 @@ Return all available bots.
 ```json
 {
   "bots": [
-    { "id": "bullet", "name": "Bullet", "elo": 1400 },
-    { "id": "blitz", "name": "Blitz", "elo": 1700 }
+    { "id": "bullet", "name": "Bullet", "elo": 1400, "description": "A fully-featured bitboard engine..." },
+    { "id": "blitz",  "name": "Blitz",  "elo": 1700, "description": "A fully-featured bitboard engine..." }
   ]
 }
 ```

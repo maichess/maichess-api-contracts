@@ -41,6 +41,7 @@ message Bot {
   string name = 2;
   // Approximate ELO strength.
   int32 elo = 3;
+  string description = 4;
 }
 
 message ListBotsRequest {}

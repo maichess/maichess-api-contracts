@@ -3,15 +3,67 @@
 **Base URL:** `http://match-manager-service`
 **Implementation:** ASP.NET
 
-Accepts player moves and serves match state. Move validation is delegated to Move Validator via gRPC; bot moves are requested from Engine via gRPC after each human ply. Real-time events (moves, match end, draw offers) are pushed to clients via the socket service — Match Manager calls `Socket.EmitEvent` over gRPC after each state change.
+Accepts player moves and serves match state. Move validation is delegated to Move Validator via gRPC; bot moves are requested from Engine via gRPC after each ply. Real-time events (moves, match end, draw offers) are pushed to clients via the socket service — Match Manager calls `Socket.BroadcastMatchEvent` over gRPC after each state change so both participants and spectators receive them.
 
 Player objects in responses are either a user `{"user_id": "...", "username": "..."}` or a bot `{"bot_id": "...", "name": "..."}`.
+
+A match's clock rules are represented by the `time_format` object:
+
+```json
+"time_format": { "id": "5+0", "base_ms": 300000, "increment_ms": 0, "category": "blitz" }
+```
+
+The canonical catalogue of presets is served by Match Maker at `GET /time-formats`.
+
+---
+
+## GET /matches
+
+List matches filtered by status. Used by the Watch feature on the client.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `status` | string | No | `ongoing` (default). Future revisions may add `ended` / `all`. |
+| `category` | string | No | Filter by time-format category: `bullet`, `blitz`, `rapid`, or `classical` |
+| `page` | integer | No | 1-based page number (default: 1) |
+| `page_size` | integer | No | Results per page, max 100 (default: 20) |
+
+**`200 OK`**
+```json
+{
+  "matches": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "white": { "user_id": "3f2504e0-...", "username": "alice" },
+      "black": { "bot_id": "stockfish-3", "name": "Stockfish Level 3" },
+      "status": "ongoing",
+      "time_format": { "id": "5+0", "base_ms": 300000, "increment_ms": 0, "category": "blitz" },
+      "white_time_ms": 179500,
+      "black_time_ms": 180000,
+      "last_move_at_ms": 1714300000000,
+      "move_count": 12
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+The compact summary intentionally omits `current_fen` and `moves`; clients open a specific match via `GET /matches/{id}` to fetch the full state.
+
+**`400 Bad Request`** — invalid `status` or `category`
+**`401 Unauthorized`**
 
 ---
 
 ## GET /matches/{id}
 
-Return the current state of a match.
+Return the current state of a match. Any authenticated user may read an ongoing match (so spectators in Watch mode can load the board); access to finished matches is restricted to participants.
 
 **Auth:** Bearer token
 
@@ -30,7 +82,7 @@ Return the current state of a match.
   "current_fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
   "status": "ongoing",
   "moves": ["e2e4"],
-  "time_control": "blitz",
+  "time_format": { "id": "3+2", "base_ms": 180000, "increment_ms": 2000, "category": "blitz" },
   "white_time_ms": 179500,
   "black_time_ms": 180000,
   "last_move_at_ms": 1714300000000,
@@ -47,7 +99,7 @@ side is a bot, or the match has ended. Used by the client to show or hide the "A
 The Analysis service determines import eligibility independently by reading match-db directly.
 
 **`401 Unauthorized`**
-**`403 Forbidden`** — match is between other players and the requestor is not a participant
+**`403 Forbidden`** — match has ended and the requestor is not a participant
 **`404 Not Found`**
 
 ---
@@ -108,6 +160,8 @@ Submit a move on behalf of the authenticated player.
 
 **`200 OK`** — updated Match object (same schema as `GET /matches/{id}`)
 
+After a move is accepted the mover's clock is decremented by the time they took, then `increment_ms` is added back when the match is still ongoing. A move that triggers a timeout or game-ending result does not receive the increment.
+
 **`400 Bad Request`** — move is illegal; body contains `{"error": "reason"}`
 **`401 Unauthorized`**
 **`403 Forbidden`** — not a participant, or not the requestor's turn
@@ -132,4 +186,3 @@ Forfeit the match on behalf of the authenticated player.
 **`401 Unauthorized`**
 **`403 Forbidden`** — not a participant
 **`409 Conflict`** — match has already ended
-

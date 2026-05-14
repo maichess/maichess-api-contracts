@@ -166,6 +166,47 @@ starting position; whatif moves can be explored once a session is opened.
 
 ---
 
+## Matches
+
+### GET /matches
+
+List the authenticated user's finished matches sourced directly from match-db. Used by the analysis client so a player can pick a past game to review without pasting an ID. The analysis service reads `matches` straight from the database — it does **not** proxy through Match Manager.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `page` | integer | No | 1-based page number (default: 1) |
+| `page_size` | integer | No | Results per page, max 100 (default: 20) |
+
+**`200 OK`**
+```json
+{
+  "matches": [
+    {
+      "match_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "white": { "user_id": "3f2504e0-...", "username": "alice" },
+      "black": { "bot_id": "stockfish-3", "name": "Stockfish Level 3" },
+      "status": "white_won",
+      "time_format": { "id": "5+0", "base_ms": 300000, "increment_ms": 0, "category": "blitz" },
+      "move_count": 38,
+      "finished_at_ms": 1714300000000
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+Matches are returned newest first by `last_move_at`. Only matches the authenticated user participated in (as `white.user_id` or `black.user_id`) are included; ongoing matches are not. Each row's `match_id` can be passed to `POST /games/from-match/{match_id}` to import the game for analysis.
+
+**`401 Unauthorized`**
+
+---
+
 ## Analysis Configuration
 
 ### GET /analysis/config

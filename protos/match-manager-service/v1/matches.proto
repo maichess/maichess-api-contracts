@@ -9,14 +9,20 @@ option java_package = "maichess.match_manager.v1.matches";
 // Matches instantiates and manages chess match state.
 // CreateMatch is called by Match Maker; all other RPCs are used internally
 // and reflected back to clients via the Match Manager REST API.
-// Real-time events are pushed to clients by calling Socket.EmitEvent on the
-// socket service — see MatchEvent and its variants below for payload shapes.
+// Real-time events are pushed to clients by calling Socket.BroadcastMatchEvent
+// on the socket service — see MatchEvent and its variants below for payload
+// shapes.
 service Matches {
   // CreateMatch is called by Match Maker once an opponent has been found.
   rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
 
   // GetMatch returns the current state of a match.
   rpc GetMatch(GetMatchRequest) returns (GetMatchResponse);
+
+  // ListMatches returns a paginated list of matches filtered by status and
+  // optionally by time-format category. Used to power the Watch feature on
+  // the client.
+  rpc ListMatches(ListMatchesRequest) returns (ListMatchesResponse);
 
   // MakeMove applies a validated move to a match.
   rpc MakeMove(MakeMoveRequest) returns (MakeMoveResponse);
@@ -38,12 +44,18 @@ message Player {
   }
 }
 
-enum TimeControl {
-  TIME_CONTROL_UNSPECIFIED = 0;
-  TIME_CONTROL_BULLET = 1;    // ≤ 3 min
-  TIME_CONTROL_BLITZ = 2;     // 3–10 min
-  TIME_CONTROL_RAPID = 3;     // 10–60 min
-  TIME_CONTROL_CLASSICAL = 4; // > 60 min
+// TimeFormat describes the clock rules for a match. The canonical list of
+// supported presets is served by Match Maker via GET /time-formats; matches
+// always embed the resolved format so consumers don't need to look it up.
+message TimeFormat {
+  // Canonical preset identifier, e.g. "3+0", "3+2", "5+0", "10+5".
+  string id = 1;
+  // Base clock allocated to each side at the start of the match.
+  int64 base_ms = 2;
+  // Increment added to the mover's clock after every move they make.
+  int64 increment_ms = 3;
+  // Coarse bucket: "bullet" | "blitz" | "rapid" | "classical".
+  string category = 4;
 }
 
 enum MatchStatus {
@@ -75,7 +87,7 @@ message Match {
   MatchStatus status = 5;
   // Full move history in UCI notation, oldest first.
   repeated string moves = 6;
-  TimeControl time_control = 7;
+  TimeFormat time_format = 7;
   // Remaining clock time in milliseconds for each side.
   int64 white_time_ms = 8;
   int64 black_time_ms = 9;
@@ -84,7 +96,7 @@ message Match {
 message CreateMatchRequest {
   Player white = 1;
   Player black = 2;
-  TimeControl time_control = 3;
+  TimeFormat time_format = 3;
 }
 
 message CreateMatchResponse {
@@ -97,6 +109,31 @@ message GetMatchRequest {
 
 message GetMatchResponse {
   Match match = 1;
+}
+
+// ListMatches filter — covers ongoing-only listing today; the enum leaves
+// room for ENDED or ALL filters in future revisions without breaking callers.
+enum MatchStatusFilter {
+  MATCH_STATUS_FILTER_UNSPECIFIED = 0;
+  MATCH_STATUS_FILTER_ONGOING = 1;
+}
+
+message ListMatchesRequest {
+  MatchStatusFilter status = 1;
+  // Optional category filter ("bullet" | "blitz" | "rapid" | "classical").
+  // Empty string means no filter.
+  string category = 2;
+  // 1-based page number; 0 is treated as 1.
+  int32 page = 3;
+  // Defaults to 20 when 0; capped at 100.
+  int32 page_size = 4;
+}
+
+message ListMatchesResponse {
+  repeated Match matches = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
 }
 
 message MakeMoveRequest {
@@ -120,8 +157,8 @@ message ResignMatchResponse {
 }
 
 // MatchEvent and its variants define the payload shapes Match Manager sends to
-// clients via Socket.EmitEvent. The event name maps to each oneof field name
-// (e.g. "move_made", "match_ended", "draw_offered", "draw_declined").
+// clients via Socket.BroadcastMatchEvent. The event name maps to each oneof
+// field name (e.g. "move_made", "match_ended", "draw_offered", "draw_declined").
 message MatchEvent {
   oneof event {
     MoveMadeEvent move_made = 1;

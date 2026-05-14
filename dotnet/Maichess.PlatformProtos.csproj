@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <PackageId>Maichess.PlatformProtos</PackageId>
-    <Version>0.0.0</Version>
+    <Version>0.3.2</Version>
     <Authors>maichess</Authors>
     <Description>Generated C# gRPC client and server stubs for maichess services</Description>
     <RepositoryUrl>https://github.com/maichess/maichess-api-contracts</RepositoryUrl>

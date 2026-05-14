@@ -23,9 +23,39 @@ The server validates the token by calling `Auth.ValidateToken` over gRPC. If val
 
 ---
 
-## Events
+## Client → Server messages
 
-All events are emitted by the server to the client. Clients do not send events.
+Clients send two control messages to manage spectator subscriptions. All other traffic is server-to-client.
+
+### `subscribe_match`
+
+Sent by the client when it opens a match view (either as a participant or as a spectator). The server joins this connection to the `match:<match_id>` room so it receives every subsequent `move_made`, `match_ended`, `draw_offered`, and `draw_declined` event broadcast for that match.
+
+```js
+socket.emit('subscribe_match', { match_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' });
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `match_id` | UUID | Match to subscribe to |
+
+A client may subscribe to multiple matches simultaneously. No acknowledgement is sent; if `match_id` is malformed or missing the server silently ignores the message.
+
+### `unsubscribe_match`
+
+Sent by the client when it leaves a match view. Mirror of `subscribe_match`.
+
+```js
+socket.emit('unsubscribe_match', { match_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' });
+```
+
+When a socket disconnects, all of its room subscriptions are released automatically.
+
+---
+
+## Server → Client events
+
+All events below are emitted by the server.
 
 ### `matched`
 
@@ -45,7 +75,7 @@ Emitted by **Match Maker** when a match has been found and created.
 
 ### `move_made`
 
-Emitted by **Match Manager** after every move, including bot moves.
+Emitted by **Match Manager** after every move, including bot moves. Broadcast to the `match:<match_id>` room — every client that has called `subscribe_match` for this match receives it (participants and spectators alike).
 
 ```json
 {
@@ -71,7 +101,7 @@ Emitted by **Match Manager** after every move, including bot moves.
 
 ### `match_ended`
 
-Emitted by **Match Manager** when the game concludes.
+Emitted by **Match Manager** when the game concludes. Broadcast to the `match:<match_id>` room.
 
 ```json
 {
@@ -89,7 +119,7 @@ Emitted by **Match Manager** when the game concludes.
 
 ### `draw_offered`
 
-Emitted by **Match Manager** when a player offers a draw.
+Emitted by **Match Manager** when a player offers a draw. Broadcast to the `match:<match_id>` room.
 
 ```json
 {
@@ -105,7 +135,7 @@ Emitted by **Match Manager** when a player offers a draw.
 
 ### `draw_declined`
 
-Emitted by **Match Manager** when a draw offer is declined or retracted.
+Emitted by **Match Manager** when a draw offer is declined or retracted. Broadcast to the `match:<match_id>` room.
 
 ```json
 {

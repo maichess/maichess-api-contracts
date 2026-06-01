@@ -8,7 +8,7 @@ option java_package = "maichess.auth.v1.auth";
 
 // Auth exposes token validation for internal service-to-service use.
 // Register, Login, Refresh, and Logout are REST-only and defined in
-// api-contracts/rest/auth.md.
+// rest/auth.md.
 service Auth {
   // ValidateToken checks whether an access token is valid and not revoked.
   // Other services call this to authenticate incoming requests without

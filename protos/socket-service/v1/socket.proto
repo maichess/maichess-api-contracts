@@ -13,7 +13,7 @@ service Socket {
   // subscribed to a given match room (participants and spectators alike). The
   // socket service joins / leaves connections to "match:<match_id>" rooms when
   // it receives `subscribe_match` / `unsubscribe_match` client events; see
-  // api-contracts/rest/socket.md for the client-facing protocol.
+  // rest/socket.md for the client-facing protocol.
   rpc BroadcastMatchEvent(BroadcastMatchEventRequest) returns (BroadcastMatchEventResponse);
 }
 

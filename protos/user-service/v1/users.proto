@@ -27,6 +27,8 @@ message User {
   int32 wins = 4;
   int32 losses = 5;
   int32 draws = 6;
+  // Whether the player has opted into the client's developer area.
+  bool dev_mode = 7;
 }
 
 message CreateUserRequest {
@@ -50,6 +52,9 @@ message GetUserResponse {
 message UpdateUserRequest {
   string user_id = 1;
   string username = 2;
+  // Optional so that "not provided" is distinguishable from false, letting
+  // username and dev_mode be patched independently.
+  optional bool dev_mode = 3;
 }
 
 message UpdateUserResponse {

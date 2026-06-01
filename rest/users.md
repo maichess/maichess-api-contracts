@@ -23,7 +23,8 @@ Return the authenticated user's profile.
   "elo": 1240,
   "wins": 32,
   "losses": 18,
-  "draws": 5
+  "draws": 5,
+  "dev_mode": false
 }
 ```
 
@@ -42,10 +43,12 @@ Update mutable fields on the authenticated user's profile.
 | Field | Type | Description |
 |---|---|---|
 | `username` | string | New unique username |
+| `dev_mode` | boolean | Toggle the developer area on the profile |
 
 ```json
 {
-  "username": "alice2"
+  "username": "alice2",
+  "dev_mode": true
 }
 ```
 

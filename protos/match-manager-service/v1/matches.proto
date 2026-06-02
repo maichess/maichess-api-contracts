@@ -40,13 +40,24 @@ service Matches {
   // history. Available for matches where at least one side is a bot, and for
   // any match that has ended. Used to power the analysis navigation UI.
   rpc GetMatchPosition(GetMatchPositionRequest) returns (GetMatchPositionResponse);
+
+  // SyncExternalMatch updates the state of an external match. Only valid for
+  // matches created with source = EXTERNAL. Bypasses move validation and
+  // bot-move scheduling; broadcasts socket events so Watch spectators see
+  // real-time updates. Does not call RecordMatchResult (external matches are
+  // unrated).
+  rpc SyncExternalMatch(SyncExternalMatchRequest) returns (SyncExternalMatchResponse);
 }
 
-// Player represents either a human user or a bot on one side of the board.
+// Player represents either a human user, a bot, or an external (non-maichess)
+// participant on one side of the board.
 message Player {
   oneof identity {
     string user_id = 1;
     string bot_id = 2;
+    // Display name for a player that exists only on an external provider
+    // (e.g. an opponent bot on a tournament server). Not a maichess entity.
+    string external_name = 3;
   }
 }
 
@@ -117,6 +128,9 @@ message Match {
   string external_provider = 12;
   // Unix timestamp in milliseconds at which the match ended; 0 while ongoing.
   int64 finished_at_ms = 13;
+  // Opaque reference linking this match to a game on the external provider
+  // (e.g. tournament-server gameId). Empty for native matches.
+  string external_ref = 14;
 }
 
 message CreateMatchRequest {
@@ -133,6 +147,15 @@ message CreateMatchRequest {
   // FEN is supplied, current_fen and FenHistory[0] are seeded from it; the
   // position is validated and an invalid FEN is rejected with INVALID_ARGUMENT.
   string start_fen = 5;
+  // When set to EXTERNAL, the match is read-only: move validation and bot-move
+  // scheduling are skipped; state is updated exclusively via SyncExternalMatch.
+  MatchSource source = 6;
+  // External provider identifier (e.g. "tournament-server"); ignored when
+  // source is NATIVE or unset.
+  string external_provider = 7;
+  // Opaque reference linking this match to a game on the external provider
+  // (e.g. tournament-server gameId). Ignored when source is NATIVE or unset.
+  string external_ref = 8;
 }
 
 message CreateMatchResponse {
@@ -264,4 +287,22 @@ message GetMatchPositionResponse {
   string move = 3;
   // True when this index equals the current live game position.
   bool is_current = 4;
+}
+
+message SyncExternalMatchRequest {
+  string match_id = 1;
+  // Current board position in FEN notation.
+  string current_fen = 2;
+  // Full move list in UCI notation, oldest first.
+  repeated string moves = 3;
+  MatchStatus status = 4;
+  int64 white_time_ms = 5;
+  int64 black_time_ms = 6;
+  // Set when the game ends; 0 while ongoing.
+  int64 finished_at_ms = 7;
+  EndReason end_reason = 8;
+}
+
+message SyncExternalMatchResponse {
+  Match match = 1;
 }

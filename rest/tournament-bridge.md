@@ -1,0 +1,335 @@
+# Tournament Bridge Service — REST API
+
+**Base URL:** `http://tournament-bridge-service`
+**Implementation:** ASP.NET
+
+Proxies tournament lifecycle to an external tournament server, registers a maichess bot to play, drives moves via the Engine service, and mirrors each game into match-db as an `external` match. The bridge is the only maichess service that communicates with external tournament servers.
+
+All endpoints accept an optional `?server=<url>` query parameter to target a specific tournament server. When omitted, the configured default URL is used.
+
+Player objects in responses follow the same shape as Match Manager: `{"user_id": "...", "username": "..."}`, `{"bot_id": "...", "name": "..."}`, or `{"external_name": "..."}`.
+
+---
+
+## GET /tournaments
+
+List tournaments from the target server, grouped by status.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `server` | string | No | Tournament server URL (default: configured default) |
+
+**`200 OK`**
+```json
+{
+  "created": [
+    {
+      "id": "t7kXq2",
+      "fullName": "Friday Night Bots",
+      "clock": { "limit": 300, "increment": 3 },
+      "nbPlayers": 4,
+      "nbRounds": 5,
+      "format": "swiss",
+      "matchesPerPairing": 1,
+      "startPosition": "standard",
+      "createdBy": "userId"
+    }
+  ],
+  "started": [],
+  "finished": []
+}
+```
+
+**`502 Bad Gateway`** — tournament server unreachable
+
+---
+
+## POST /tournaments
+
+Create a tournament on the target server. The authenticated user becomes the director.
+
+**Auth:** Bearer token
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Tournament name |
+| `nbRounds` | integer | Yes | Number of rounds |
+| `clockLimit` | integer | Yes | Base time in seconds |
+| `clockIncrement` | integer | Yes | Increment per move in seconds |
+| `rated` | boolean | No | Default: true |
+| `format` | string | No | `swiss` (default), `singleElimination`, `doubleElimination`, `groupStage`, `league` |
+| `startPosition` | string | No | FEN or `standard` (default) |
+| `matchesPerPairing` | integer | No | Games per pairing (default: 1) |
+| `groupSize` | integer | No | Required when format is `groupStage` |
+| `server` | string | No | Tournament server URL |
+
+```json
+{
+  "name": "Friday Night Bots",
+  "nbRounds": 5,
+  "clockLimit": 300,
+  "clockIncrement": 3,
+  "format": "swiss"
+}
+```
+
+**`201 Created`** — Tournament object from the server, plus `registration_id` for tracking
+
+```json
+{
+  "registration_id": "reg_abc123",
+  "tournament": { "id": "t7kXq2", "status": "created", "..." : "..." }
+}
+```
+
+**`400 Bad Request`** — invalid config
+**`401 Unauthorized`**
+**`502 Bad Gateway`** — tournament server unreachable
+
+---
+
+## GET /tournaments/{id}
+
+Get tournament details including bracket, standings, and match-db mappings for mirrored games.
+
+**Auth:** Bearer token
+
+**Path parameters**
+
+| Name | Type | Description |
+|---|---|---|
+| `id` | string | Tournament ID on the tournament server |
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `server` | string | No | Tournament server URL |
+
+**`200 OK`**
+```json
+{
+  "tournament": {
+    "id": "t7kXq2",
+    "fullName": "Friday Night Bots",
+    "status": "started",
+    "round": 2,
+    "nbPlayers": 8,
+    "nbRounds": 5,
+    "format": "swiss",
+    "clock": { "limit": 300, "increment": 3 },
+    "standing": {
+      "page": 1,
+      "players": [
+        { "rank": 1, "points": 1.5, "tieBreak": 3.0, "bot": { "id": "bot1", "name": "Engine1" }, "nbGames": 2, "wins": 1, "draws": 1, "losses": 0 }
+      ]
+    }
+  },
+  "registration": {
+    "registration_id": "reg_abc123",
+    "maichess_bot_id": "blitz-enhanced-3",
+    "status": "active"
+  },
+  "game_mappings": [
+    { "tournament_game_id": "j0nPtcjl", "match_db_id": "a1b2c3d4-..." }
+  ]
+}
+```
+
+**`404 Not Found`**
+
+---
+
+## DELETE /tournaments/{id}
+
+Terminate a tournament. Only the director may terminate, and only while status is `created`.
+
+**Auth:** Bearer token
+
+**`204 No Content`**
+**`401 Unauthorized`**
+**`403 Forbidden`** — not the director
+**`409 Conflict`** — tournament already started or finished
+
+---
+
+## POST /tournaments/{id}/start
+
+Start the tournament. Only the director may start. Requires at least 2 joined bots.
+
+After starting, the bridge opens the tournament NDJSON stream and begins driving games automatically.
+
+**Auth:** Bearer token
+
+**`200 OK`** — Tournament object with `status: "started"`
+
+**`401 Unauthorized`**
+**`403 Forbidden`** — not the director
+**`409 Conflict`** — already started, or fewer than 2 bots
+
+---
+
+## POST /tournaments/{id}/register
+
+Register a maichess bot for the tournament. The bridge registers a bot identity on the tournament server and joins the tournament.
+
+**Auth:** Bearer token
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `bot_id` | string | Yes | Maichess bot to play (from `GET /bots`) |
+
+```json
+{ "bot_id": "blitz-enhanced-3" }
+```
+
+**`200 OK`**
+```json
+{
+  "registration_id": "reg_abc123",
+  "tournament_id": "t7kXq2",
+  "bot_id": "blitz-enhanced-3",
+  "status": "registered"
+}
+```
+
+**`400 Bad Request`** — invalid bot_id
+**`401 Unauthorized`**
+**`409 Conflict`** — already registered, or tournament not in `created` status
+
+---
+
+## DELETE /tournaments/{id}/register
+
+Withdraw the registered bot from the tournament. Only allowed while status is `created`.
+
+**Auth:** Bearer token
+
+**`204 No Content`**
+**`409 Conflict`** — tournament already started
+
+---
+
+## GET /tournaments/{id}/rounds/{round}
+
+Get pairings for a round, enriched with match-db match IDs for mirrored games.
+
+**Auth:** Bearer token
+
+**`200 OK`**
+```json
+{
+  "round": 2,
+  "pairings": [
+    {
+      "white": { "id": "bot1", "name": "Engine1" },
+      "black": { "id": "bot2", "name": "Engine2" },
+      "gameId": "j0nPtcjl",
+      "match_db_id": "a1b2c3d4-...",
+      "winner": null
+    }
+  ]
+}
+```
+
+---
+
+## GET /tournaments/{id}/results
+
+Get standings as JSON (not NDJSON — the bridge collects the stream for the client).
+
+**Auth:** Bearer token
+
+**`200 OK`**
+```json
+{
+  "results": [
+    { "rank": 1, "points": 3.5, "tieBreak": 9.0, "bot": { "id": "bot1", "name": "Engine1" }, "nbGames": 4, "wins": 3, "draws": 1, "losses": 0 }
+  ]
+}
+```
+
+---
+
+## GET /tournaments/{id}/stream
+
+Server-Sent Events (SSE) stream of tournament events. The bridge translates the tournament server's NDJSON stream into SSE for browser consumption.
+
+**Auth:** Bearer token
+
+**Event types** (sent as SSE `data:` lines):
+
+```
+event: tournamentStarted
+data: {}
+
+event: roundStarted
+data: {"round": 1}
+
+event: gameStart
+data: {"round": 1, "gameId": "j0nPtcjl", "color": "white", "match_db_id": "a1b2c3d4-..."}
+
+event: roundFinished
+data: {"round": 1}
+
+event: tournamentFinished
+data: {"winner": {"id": "bot1", "name": "Engine1"}}
+```
+
+The `gameStart` event is enriched with `match_db_id` once the bridge creates the mirrored match. Game-level events (moves, game end) flow through the existing socket.io pipeline via match-db.
+
+---
+
+## GET /bots
+
+List available maichess bots. Proxies to Engine Service `ListBots`.
+
+**Auth:** Bearer token
+
+**`200 OK`**
+```json
+{
+  "bots": [
+    { "id": "blitz-enhanced-3", "name": "Enhanced Blitz L3", "elo": 1800, "description": "..." }
+  ]
+}
+```
+
+---
+
+## GET /config
+
+Get current bridge configuration.
+
+**Auth:** Bearer token
+
+**`200 OK`**
+```json
+{
+  "default_server_url": "http://tournament-server:8080"
+}
+```
+
+---
+
+## PUT /config
+
+Update bridge configuration.
+
+**Auth:** Bearer token
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `default_server_url` | string | Yes | Default tournament server URL |
+
+**`200 OK`** — updated config

@@ -226,3 +226,23 @@ Forfeit the match on behalf of the authenticated player.
 **`401 Unauthorized`**
 **`403 Forbidden`** — not a participant
 **`409 Conflict`** — match has already ended
+
+---
+
+## External match fields
+
+Match summaries and full match objects include the following fields for external-game support:
+
+| Field | Type | Description |
+|---|---|---|
+| `source` | string | `native` (default) or `external` |
+| `external_provider` | string | Provider name when `source` is `external` (e.g. `tournament-server`); empty for native |
+| `external_ref` | string | Opaque ID linking to the game on the external provider (e.g. tournament-server gameId); empty for native |
+
+External matches are created by the Tournament Bridge Service via gRPC `CreateMatch(source = EXTERNAL)` and updated via `SyncExternalMatch`. They bypass move validation, bot-move scheduling, and player-stat recording. Socket events (`move_made`, `match_ended`) are still broadcast so Watch spectators receive real-time updates.
+
+Players on external matches may include `external_name` identity (alongside existing `user_id` and `bot_id`) for opponents that are not maichess entities:
+
+```json
+{ "external_name": "OpponentBot" }
+```

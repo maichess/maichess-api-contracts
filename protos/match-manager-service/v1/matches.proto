@@ -127,6 +127,12 @@ message CreateMatchRequest {
   // the human side (white if human, else black if human, else nobody). Callers
   // that spawn bot-vs-bot games supply the human who started them.
   Player created_by = 4;
+  // Optional custom start position in FEN notation. When omitted, empty, or the
+  // literal "standard", the match begins from the standard initial position
+  // exactly as before (the only behavior pre-existing callers trigger). When a
+  // FEN is supplied, current_fen and FenHistory[0] are seeded from it; the
+  // position is validated and an invalid FEN is rejected with INVALID_ARGUMENT.
+  string start_fen = 5;
 }
 
 message CreateMatchResponse {

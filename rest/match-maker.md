@@ -120,7 +120,7 @@ Leave the matchmaking queue. No-op if the player has already been matched.
 
 ## POST /matches/bot-vs-bot
 
-Create a match between two bots. The caller has no role in the resulting match and is expected to watch it via the Watch feature. Useful for exhibition games and bot evaluation.
+Create a match between two bots. The caller has no playing role in the resulting match and is expected to watch it via the Watch feature. Useful for exhibition games, bot evaluation, and the Bot Arena setups (which spawn every game through this path). The match is attributed to the authenticated caller as its `created_by` initiator, so bot-vs-bot games a user starts appear in their initiated-game views.
 
 **Auth:** Bearer token (any authenticated user)
 
@@ -131,12 +131,14 @@ Create a match between two bots. The caller has no role in the resulting match a
 | `white_bot_id` | string | Yes | Bot id from `GET /bots` |
 | `black_bot_id` | string | Yes | Bot id from `GET /bots` (may equal `white_bot_id`) |
 | `time_format_id` | string | Yes | One of the `id` values returned by `GET /time-formats` |
+| `start_fen` | string | No | Custom start position in FEN notation. Omitted, empty, or the literal `"standard"` means the standard initial position. Required by the FEN-list Bot Arena setups. |
 
 ```json
 {
   "white_bot_id": "stockfish-5",
   "black_bot_id": "stockfish-3",
-  "time_format_id": "5+0"
+  "time_format_id": "5+0",
+  "start_fen": "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2"
 }
 ```
 
@@ -147,7 +149,7 @@ Create a match between two bots. The caller has no role in the resulting match a
 }
 ```
 
-The match starts immediately; Match Manager schedules the first bot move (white) on creation and chains subsequent moves automatically.
+The match starts immediately from the resolved start position; Match Manager schedules the first bot move (for whichever side is to move in that position) on creation and chains subsequent moves automatically.
 
-**`400 Bad Request`** — unknown `white_bot_id`, `black_bot_id`, or `time_format_id`
+**`400 Bad Request`** — unknown `white_bot_id`, `black_bot_id`, or `time_format_id`, or an invalid `start_fen`
 **`401 Unauthorized`**

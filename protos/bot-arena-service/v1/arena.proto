@@ -1,0 +1,260 @@
+syntax = "proto3";
+
+package maichess.bot_arena.v1;
+
+import "match-manager-service/v1/matches.proto";
+
+option csharp_namespace = "Maichess.BotArena.V1";
+option java_multiple_files = true;
+option java_package = "maichess.bot_arena.v1.arena";
+
+// Arena orchestrates bot-vs-bot setups. A setup ("collection") expands into an
+// ordered list of bot-vs-bot games which Arena spawns through Match Maker's
+// bot-vs-bot REST path and observes via Match Manager. Finished collections
+// store a typed result view (bracket / matrix table / single series).
+//
+// The canonical external surface is the REST API in rest/bot-arena.md; this
+// service definition is the source of truth for the data model and operations.
+service Arena {
+  // CreateCollection resolves a setup config, persists it as pending, and
+  // begins scheduling its games subject to the global concurrency limit.
+  rpc CreateCollection(CreateCollectionRequest) returns (CreateCollectionResponse);
+
+  // ListCollections returns collections, optionally filtered by status
+  // (finished ones power the Results tab), newest first.
+  rpc ListCollections(ListCollectionsRequest) returns (ListCollectionsResponse);
+
+  // GetCollection returns a single collection with its typed result view and
+  // live progress.
+  rpc GetCollection(GetCollectionRequest) returns (GetCollectionResponse);
+
+  // GetConcurrencyLimit returns the global maximum number of arena games that
+  // may be in flight at once.
+  rpc GetConcurrencyLimit(GetConcurrencyLimitRequest) returns (GetConcurrencyLimitResponse);
+
+  // SetConcurrencyLimit updates the global concurrency limit. This is a single
+  // global value, editable by any authenticated user (not per-user).
+  rpc SetConcurrencyLimit(SetConcurrencyLimitRequest) returns (SetConcurrencyLimitResponse);
+}
+
+// SetupType identifies the kind of bot-vs-bot setup a collection represents.
+enum SetupType {
+  SETUP_TYPE_UNSPECIFIED = 0;
+  SETUP_TYPE_TOURNAMENT = 1;
+  SETUP_TYPE_MATRIX = 2;
+  SETUP_TYPE_SINGLE = 3;
+}
+
+// CollectionStatus is the lifecycle state of a collection.
+enum CollectionStatus {
+  COLLECTION_STATUS_UNSPECIFIED = 0;
+  COLLECTION_STATUS_PENDING = 1;
+  COLLECTION_STATUS_RUNNING = 2;
+  COLLECTION_STATUS_FINISHED = 3;
+}
+
+// TournamentColorMode controls how each chosen FEN is played within a stage.
+enum TournamentColorMode {
+  TOURNAMENT_COLOR_MODE_UNSPECIFIED = 0;
+  // Each chosen FEN is played twice — once with each bot as white.
+  TOURNAMENT_COLOR_MODE_BOTH_COLORS = 1;
+  // Each chosen FEN is played once, with colors assigned randomly.
+  TOURNAMENT_COLOR_MODE_RANDOM = 2;
+}
+
+// TournamentConfig seeds all bots into a random-pairing single-elimination
+// bracket. Each stage (pairing) plays `fens_per_stage` positions taken from
+// `fen_list`; `color_mode` decides whether each position is played both colors
+// or once with random colors. The stage winner advances; ties are resolved by
+// the documented tie-break ladder (wins, then rounds-to-win, then aggregate
+// clock difference, then aggregate material difference, then a seeded coin flip).
+message TournamentConfig {
+  repeated string bot_ids = 1;
+  // Pool of start positions. Empty or ["standard"] means the standard start.
+  repeated string fen_list = 2;
+  // How many positions from the pool each stage plays. Clamped to the pool size.
+  int32 fens_per_stage = 3;
+  TournamentColorMode color_mode = 4;
+  maichess.match_manager.v1.TimeFormat time_format = 5;
+}
+
+// MatrixConfig plays a round-robin: every unordered bot pair plays, for each
+// FEN, `games_per_fen` games with colors always alternating.
+message MatrixConfig {
+  repeated string bot_ids = 1;
+  // Empty or ["standard"] means the standard start position.
+  repeated string fen_list = 2;
+  int32 games_per_fen = 3;
+  maichess.match_manager.v1.TimeFormat time_format = 4;
+}
+
+// SingleConfig is one match-up between two bots over a FEN list.
+message SingleConfig {
+  string white_bot_id = 1;
+  string black_bot_id = 2;
+  // Empty or ["standard"] means the standard start position.
+  repeated string fen_list = 3;
+  int32 games_per_fen = 4;
+  // When true, colors alternate per game (and across FENs); otherwise the
+  // configured white/black assignment is fixed for every game.
+  bool keep_switching_colors = 5;
+  maichess.match_manager.v1.TimeFormat time_format = 6;
+}
+
+// GameCollection is a persisted setup with its resolved config, live progress,
+// and (once finished) a typed result view.
+message GameCollection {
+  string id = 1;
+  string name = 2;
+  SetupType type = 3;
+  // User id of the human who created the setup. Propagated as created_by on
+  // every spawned match.
+  string created_by = 4;
+  CollectionStatus status = 5;
+  int64 created_at_ms = 6;
+  // Unix ms at which the collection finished; 0 while pending/running.
+  int64 finished_at_ms = 7;
+
+  // The resolved config for this collection.
+  oneof config {
+    TournamentConfig tournament = 8;
+    MatrixConfig matrix = 9;
+    SingleConfig single = 10;
+  }
+
+  // The typed result view, populated as games finish.
+  oneof result {
+    TournamentBracket bracket = 11;
+    MatrixTable matrix_table = 12;
+    SingleSeries single_series = 13;
+  }
+
+  // Live counts so the client can render progress before completion.
+  CollectionProgress progress = 14;
+}
+
+// CollectionProgress summarizes how far a collection has advanced.
+message CollectionProgress {
+  int32 total_games = 1;
+  int32 finished_games = 2;
+  int32 running_games = 3;
+  int32 pending_games = 4;
+}
+
+// GameResult is one finished (or in-flight) game within a collection, carrying
+// the metadata needed to render trees / matrices / lists.
+message GameResult {
+  string match_id = 1;
+  // The start position this game was played from.
+  string fen = 2;
+  // Human-friendly label for the start position (e.g. "Standard", "FEN 2").
+  string fen_label = 3;
+  string white_bot_id = 4;
+  string black_bot_id = 5;
+  // MATCH_STATUS_ONGOING until the game ends.
+  maichess.match_manager.v1.MatchStatus result = 6;
+  // 0-based position of this game in the collection's expanded game order.
+  int32 order = 7;
+}
+
+// TournamentBracket renders the rounds of a single-elimination bracket.
+message TournamentBracket {
+  repeated TournamentRound rounds = 1;
+  // Set once the final has resolved.
+  string winner_bot_id = 2;
+}
+
+message TournamentRound {
+  // 1-based round number (1 = first round).
+  int32 round_number = 1;
+  repeated TournamentPairing pairings = 2;
+}
+
+message TournamentPairing {
+  string bot_a_id = 1;
+  // Empty when this pairing is a bye.
+  string bot_b_id = 2;
+  repeated GameResult games = 3;
+  // The bot that advances. For a bye this equals bot_a_id.
+  string winner_bot_id = 4;
+  bool bye = 5;
+  // Aggregate stage scores (win = 1, draw = 0.5) for display.
+  double bot_a_score = 6;
+  double bot_b_score = 7;
+}
+
+// MatrixTable renders a bot-by-bot round-robin grid.
+message MatrixTable {
+  // Row/column ordering of bots.
+  repeated string bot_ids = 1;
+  // One cell per unordered bot pair.
+  repeated MatrixCell cells = 2;
+  // Every game in the matrix, in expansion order.
+  repeated GameResult games = 3;
+}
+
+message MatrixCell {
+  string bot_a_id = 1;
+  string bot_b_id = 2;
+  // Aggregate score for bot_a / bot_b across all games of this pair.
+  double bot_a_score = 3;
+  double bot_b_score = 4;
+}
+
+// SingleSeries renders one labelled, ordered list of games for a single setup.
+message SingleSeries {
+  string bot_a_id = 1;
+  string bot_b_id = 2;
+  double bot_a_score = 3;
+  double bot_b_score = 4;
+  repeated GameResult games = 5;
+}
+
+message CreateCollectionRequest {
+  string name = 1;
+  // User id of the setup creator; attributed as created_by on every match.
+  string created_by = 2;
+  oneof config {
+    TournamentConfig tournament = 3;
+    MatrixConfig matrix = 4;
+    SingleConfig single = 5;
+  }
+}
+
+message CreateCollectionResponse {
+  GameCollection collection = 1;
+}
+
+message ListCollectionsRequest {
+  // UNSPECIFIED returns all statuses.
+  CollectionStatus status = 1;
+  // Defaults to 20 when 0; capped at 100.
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListCollectionsResponse {
+  repeated GameCollection collections = 1;
+}
+
+message GetCollectionRequest {
+  string id = 1;
+}
+
+message GetCollectionResponse {
+  GameCollection collection = 1;
+}
+
+message GetConcurrencyLimitRequest {}
+
+message GetConcurrencyLimitResponse {
+  int32 limit = 1;
+}
+
+message SetConcurrencyLimitRequest {
+  int32 limit = 1;
+}
+
+message SetConcurrencyLimitResponse {
+  int32 limit = 1;
+}

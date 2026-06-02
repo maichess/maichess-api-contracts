@@ -37,12 +37,21 @@ enum MatchOutcome {
 message User {
   string id = 1;
   string username = 2;
+  // Display rating: the Glicko-2 rating rounded to the nearest integer. Kept so
+  // existing clients can read a single integer strength without change.
   int32 elo = 3;
   int32 wins = 4;
   int32 losses = 5;
   int32 draws = 6;
   // Whether the player has opted into the client's developer area.
   bool dev_mode = 7;
+  // Glicko-2 rating on the display scale (unrounded). elo is round(rating).
+  double rating = 8;
+  // Glicko-2 rating deviation on the display scale. High for new/inactive
+  // players (seeded at 350), shrinking as games accumulate.
+  double rating_deviation = 9;
+  // Glicko-2 rating volatility (internal scale), seeded at 0.06.
+  double volatility = 10;
 }
 
 message CreateUserRequest {
@@ -78,6 +87,13 @@ message UpdateUserResponse {
 message RecordMatchResultRequest {
   string user_id = 1;
   MatchOutcome outcome = 2;
+  // The opponent's display-scale Glicko-2 rating at match time, supplied by
+  // Match Manager so the rating update needs no extra lookup. For bot opponents
+  // this is the bot's configured strength.
+  double opponent_rating = 3;
+  // The opponent's display-scale rating deviation at match time. Bots use a
+  // low, fixed deviation (they are treated as having an established rating).
+  double opponent_rd = 4;
 }
 
 message RecordMatchResultResponse {

@@ -24,9 +24,19 @@ Return the authenticated user's profile.
   "wins": 32,
   "losses": 18,
   "draws": 5,
-  "dev_mode": false
+  "dev_mode": false,
+  "rating": 1240.37,
+  "rating_deviation": 62.18,
+  "volatility": 0.05998
 }
 ```
+
+| Field | Type | Description |
+|---|---|---|
+| `elo` | integer | Display rating — `rating` rounded to the nearest integer. New accounts start at `400`. |
+| `rating` | number | Glicko-2 rating on the display scale (unrounded). |
+| `rating_deviation` | number | Glicko-2 rating deviation. New accounts start at `350`; shrinks as games accumulate. A high value indicates a provisional rating. |
+| `volatility` | number | Glicko-2 volatility. New accounts start at `0.06`. |
 
 **`401 Unauthorized`**
 

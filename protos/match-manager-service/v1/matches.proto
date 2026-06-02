@@ -24,6 +24,12 @@ service Matches {
   // the client.
   rpc ListMatches(ListMatchesRequest) returns (ListMatchesResponse);
 
+  // ListUserMatches returns a paginated list of matches a user took part in
+  // (as white or black) or initiated (created_by), filtered to ended matches
+  // by default and ordered newest first. Used to power the Past Matches view
+  // under the client's Profile tab.
+  rpc ListUserMatches(ListUserMatchesRequest) returns (ListUserMatchesResponse);
+
   // MakeMove applies a validated move to a match.
   rpc MakeMove(MakeMoveRequest) returns (MakeMoveResponse);
 
@@ -66,6 +72,14 @@ enum MatchStatus {
   MATCH_STATUS_DRAW = 4;
 }
 
+// MatchSource distinguishes games played natively on maichess from games
+// mirrored in from an external provider (e.g. Lichess, tournament-server).
+enum MatchSource {
+  MATCH_SOURCE_UNSPECIFIED = 0;
+  MATCH_SOURCE_NATIVE = 1;
+  MATCH_SOURCE_EXTERNAL = 2;
+}
+
 enum EndReason {
   END_REASON_UNSPECIFIED = 0;
   END_REASON_CHECKMATE = 1;
@@ -91,12 +105,28 @@ message Match {
   // Remaining clock time in milliseconds for each side.
   int64 white_time_ms = 8;
   int64 black_time_ms = 9;
+  // Who initiated the match: the human participant for normal matches, or the
+  // human who started a bot-vs-bot game. Unset for matches created without an
+  // attributable initiator.
+  Player created_by = 10;
+  // Whether the match was played natively or mirrored from an external
+  // provider. Native for all matches created through the maichess platform.
+  MatchSource source = 11;
+  // External provider identifier when source is EXTERNAL (e.g. "lichess",
+  // "tournament-server"); empty for native matches.
+  string external_provider = 12;
+  // Unix timestamp in milliseconds at which the match ended; 0 while ongoing.
+  int64 finished_at_ms = 13;
 }
 
 message CreateMatchRequest {
   Player white = 1;
   Player black = 2;
   TimeFormat time_format = 3;
+  // Optional initiator attribution. When unset, Match Manager derives it from
+  // the human side (white if human, else black if human, else nobody). Callers
+  // that spawn bot-vs-bot games supply the human who started them.
+  Player created_by = 4;
 }
 
 message CreateMatchResponse {
@@ -111,11 +141,12 @@ message GetMatchResponse {
   Match match = 1;
 }
 
-// ListMatches filter — covers ongoing-only listing today; the enum leaves
-// room for ENDED or ALL filters in future revisions without breaking callers.
+// ListMatches / ListUserMatches filter. ListMatches (Watch) supports ongoing
+// only today; ListUserMatches (Past Matches) uses ENDED.
 enum MatchStatusFilter {
   MATCH_STATUS_FILTER_UNSPECIFIED = 0;
   MATCH_STATUS_FILTER_ONGOING = 1;
+  MATCH_STATUS_FILTER_ENDED = 2;
 }
 
 message ListMatchesRequest {
@@ -130,6 +161,25 @@ message ListMatchesRequest {
 }
 
 message ListMatchesResponse {
+  repeated Match matches = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListUserMatchesRequest {
+  // The user whose matches to list. A match matches when this user is white,
+  // black, or created_by.
+  string user_id = 1;
+  // Defaults to ENDED when UNSPECIFIED.
+  MatchStatusFilter status = 2;
+  // 1-based page number; 0 is treated as 1.
+  int32 page = 3;
+  // Defaults to 20 when 0; capped at 100.
+  int32 page_size = 4;
+}
+
+message ListUserMatchesResponse {
   repeated Match matches = 1;
   int32 total = 2;
   int32 page = 3;

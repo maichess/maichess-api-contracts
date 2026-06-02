@@ -3,7 +3,7 @@
 **Base URL:** `http://user-service`
 **Implementation:** ASP.NET
 
-Manages public player profiles and statistics. Profile creation is handled internally via gRPC by Auth on registration — there is no public `POST /users` endpoint.
+Manages public player profiles and statistics. Profile creation is handled internally via gRPC by Auth on registration — there is no public `POST /users` endpoint. Win/loss/draw counters are likewise updated internally via the `RecordMatchResult` gRPC, called by Match Manager once per human participant when a match ends — there is no public endpoint for mutating stats.
 
 The authenticated user's identity is always inferred from the `access_token` cookie set by the Auth service. No user ID is accepted in the URL.
 

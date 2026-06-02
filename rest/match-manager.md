@@ -45,7 +45,11 @@ List matches filtered by status. Used by the Watch feature on the client.
       "white_time_ms": 179500,
       "black_time_ms": 180000,
       "last_move_at_ms": 1714300000000,
-      "move_count": 12
+      "finished_at_ms": 0,
+      "move_count": 12,
+      "created_by": { "user_id": "3f2504e0-...", "username": "alice" },
+      "source": "native",
+      "external_provider": ""
     }
   ],
   "total": 1,
@@ -56,8 +60,40 @@ List matches filtered by status. Used by the Watch feature on the client.
 
 The compact summary intentionally omits `current_fen` and `moves`; clients open a specific match via `GET /matches/{id}` to fetch the full state.
 
+`finished_at_ms` is a Unix timestamp in milliseconds at which the match ended, or `0` while it is still ongoing. `created_by` is the player who initiated the match (the human participant for normal matches, or the human who started a bot-vs-bot game); it may be absent. `source` is `native` or `external`; `external_provider` names the originating platform when `source` is `external` (e.g. `lichess`, `tournament-server`) and is empty otherwise.
+
 **`400 Bad Request`** — invalid `status` or `category`
 **`401 Unauthorized`**
+
+---
+
+## GET /users/{user_id}/matches
+
+List the Past Matches for a user: every match the user played (as white or black) **or** started (`created_by`), regardless of which colour they were. Filtered to ended matches by default and ordered newest first. Used by the Past Matches view under the client's Profile tab.
+
+Bot-vs-bot games a user spawns are listed here via `created_by` attribution even though the user occupied neither colour.
+
+**Auth:** Bearer token — a user may only list their own matches.
+
+**Path parameters**
+
+| Name | Type | Description |
+|---|---|---|
+| `user_id` | UUID | The user whose matches to list |
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `status` | string | No | `ended` (default). |
+| `page` | integer | No | 1-based page number (default: 1) |
+| `page_size` | integer | No | Results per page, max 100 (default: 20) |
+
+**`200 OK`** — same paginated envelope and summary schema as `GET /matches` (including `created_by`, `source`, `external_provider`, and `finished_at_ms`), ordered by `finished_at_ms` descending.
+
+**`400 Bad Request`** — invalid `status`
+**`401 Unauthorized`**
+**`403 Forbidden`** — `user_id` is not the authenticated user
 
 ---
 
@@ -86,6 +122,10 @@ Return the current state of a match. Any authenticated user may read an ongoing 
   "white_time_ms": 179500,
   "black_time_ms": 180000,
   "last_move_at_ms": 1714300000000,
+  "finished_at_ms": 0,
+  "created_by": { "user_id": "3f2504e0-...", "username": "alice" },
+  "source": "native",
+  "external_provider": "",
   "analyzable": false
 }
 ```

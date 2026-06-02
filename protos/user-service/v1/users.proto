@@ -18,6 +18,20 @@ service Users {
 
   // UpdateUser updates mutable profile fields.
   rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+
+  // RecordMatchResult records the outcome of a finished match for a single
+  // player, incrementing their win/loss/draw counter. Called by Match Manager
+  // once per human participant when a match ends. This is the single entry
+  // point for player-stat mutations.
+  rpc RecordMatchResult(RecordMatchResultRequest) returns (RecordMatchResultResponse);
+}
+
+// MatchOutcome is the result of a finished match from one player's perspective.
+enum MatchOutcome {
+  MATCH_OUTCOME_UNSPECIFIED = 0;
+  MATCH_OUTCOME_WIN = 1;
+  MATCH_OUTCOME_LOSS = 2;
+  MATCH_OUTCOME_DRAW = 3;
 }
 
 message User {
@@ -58,5 +72,14 @@ message UpdateUserRequest {
 }
 
 message UpdateUserResponse {
+  User user = 1;
+}
+
+message RecordMatchResultRequest {
+  string user_id = 1;
+  MatchOutcome outcome = 2;
+}
+
+message RecordMatchResultResponse {
   User user = 1;
 }

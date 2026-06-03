@@ -129,7 +129,9 @@ Import a game from PGN and save it.
 Import a finished match from match-db as a saved analysis game. The match must have ended.
 Duplicates are allowed — the user may import the same match multiple times.
 
-**Auth:** Bearer token — must be a participant of the match
+**Auth:** Bearer token — must be a participant of the match (`white.user_id` or `black.user_id`)
+**or** the match's creator (`created_by`). The latter lets a user import bot-vs-bot games they
+started, which appear in their Past Matches via `created_by` yet occupy neither colour.
 
 **Path parameters**
 
@@ -141,7 +143,7 @@ Duplicates are allowed — the user may import the same match multiple times.
 
 **`400 Bad Request`** — match is still ongoing
 **`401 Unauthorized`**
-**`403 Forbidden`** — user was not a participant
+**`403 Forbidden`** — user neither played in nor created the match
 **`404 Not Found`** — match does not exist
 
 ---

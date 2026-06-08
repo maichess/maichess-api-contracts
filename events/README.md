@@ -23,7 +23,9 @@ events/
 > **CDC streams** `user.cdc.v1` / `match.cdc.v1` (Debezium, see
 > [change-data-capture.md](../../maichess-knowledge-base/change-data-capture.md)) are **internal**
 > raw change streams, not consumer contracts — they have no `.avsc` here and are produced by Kafka
-> Connect, not by services.
+> Connect, not by services. As of `feature-prompts/10` the public `user.events.v1` schema below is
+> **curated from `user.cdc.v1`** (a relay maps CDC change rows → this envelope); the schema is
+> unchanged, only its production path moved. Consume `user.events.v1`, never `user.cdc.v1`.
 
 One Avro schema per topic. Each schema is the **topic value** schema: an envelope record whose
 `payload` field is a union of the concrete event/command records for that topic. Keys are plain

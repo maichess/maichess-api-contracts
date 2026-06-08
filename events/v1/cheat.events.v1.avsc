@@ -1,0 +1,58 @@
+{
+  "type": "record",
+  "name": "CheatEvent",
+  "namespace": "maichess.events.cheat",
+  "doc": "Value schema for the cheat.events.v1 topic (compacted). Anti-cheat flag state per user, emitted by maichess-anticheat-service and consumed by the user read models / Match Maker (feature-prompts/14). Evidence stays in anticheat-db; only the flag state propagates here.",
+  "fields": [
+    { "name": "event_id", "type": "string" },
+    { "name": "event_type", "type": "string", "doc": "e.g. cheat.PlayerFlagged" },
+    { "name": "aggregate_id", "type": "string", "doc": "userId" },
+    { "name": "sequence", "type": "long", "default": 0 },
+    { "name": "occurred_at", "type": "long" },
+    { "name": "correlation_id", "type": "string", "default": "" },
+    { "name": "causation_id", "type": "string", "default": "" },
+    { "name": "producer", "type": "string" },
+    {
+      "name": "payload",
+      "type": [
+        {
+          "type": "record",
+          "name": "PlayerFlagged",
+          "doc": "Durable verdict from the reconciled post-game analysis. Sets flagged=true on the user read models.",
+          "fields": [
+            { "name": "user_id", "type": "string" },
+            { "name": "case_id", "type": "string", "doc": "anticheat-db case holding the evidence" },
+            { "name": "score", "type": "double", "doc": "combined suspicion score that crossed threshold" },
+            { "name": "summary", "type": "string", "default": "", "doc": "short human-readable reason for the Dev overview" },
+            {
+              "name": "detector",
+              "type": { "type": "enum", "name": "Detector", "symbols": ["ENGINE_CORRELATION", "STATISTICAL", "COMBINED"], "default": "COMBINED" }
+            }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "PlayerUnflagged",
+          "doc": "Dev cleared a flag (false positive). Sets flagged=false on the user read models.",
+          "fields": [
+            { "name": "user_id", "type": "string" },
+            { "name": "case_id", "type": "string" },
+            { "name": "unflagged_by", "type": "string", "doc": "dev user id (audit)" },
+            { "name": "reason", "type": "string", "default": "" }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "LiveSuspicionRaised",
+          "doc": "Advisory signal from the in-game stream processor (iteration 2). NOT a durable flag — reconciled by the post-game pass. Consumers must not set the persistent flag from this.",
+          "fields": [
+            { "name": "user_id", "type": "string" },
+            { "name": "match_id", "type": "string" },
+            { "name": "ply", "type": "int" },
+            { "name": "score", "type": "double" }
+          ]
+        }
+      ]
+    }
+  ]
+}

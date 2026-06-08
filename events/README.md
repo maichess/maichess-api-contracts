@@ -17,7 +17,13 @@ events/
     analysis.events.v1.avsc
     user.events.v1.avsc
     socket.outbound.v1.avsc       # fan-out envelope for client push
+    cheat.events.v1.avsc          # anti-cheat flag state per user (feature-prompts/14)
 ```
+
+> **CDC streams** `user.cdc.v1` / `match.cdc.v1` (Debezium, see
+> [change-data-capture.md](../../maichess-knowledge-base/change-data-capture.md)) are **internal**
+> raw change streams, not consumer contracts — they have no `.avsc` here and are produced by Kafka
+> Connect, not by services.
 
 One Avro schema per topic. Each schema is the **topic value** schema: an envelope record whose
 `payload` field is a union of the concrete event/command records for that topic. Keys are plain

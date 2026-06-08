@@ -81,8 +81,12 @@ message CountResponse {
   int64 count = 1;
 }
 
-// InsertRequest adds a new record. Any `id` field in `record` is ignored;
-// the server assigns a new ID and returns the full record including it.
+// InsertRequest adds a new record. If `record` contains a non-empty `id`, the
+// server inserts with that id and returns ALREADY_EXISTS on collision; this lets
+// callers mint aggregate ids (e.g. for event-sourced match creation). If `id` is
+// absent or empty, the server assigns a new one. The returned record always
+// includes the effective id. (Honoring a supplied id is implemented by the
+// MongoDB adapter; the Postgres adapter still assigns its own id.)
 message InsertRequest {
   string collection = 1;
   google.protobuf.Struct record = 2;

@@ -1,0 +1,54 @@
+{
+  "type": "record",
+  "name": "MatchmakingCommand",
+  "namespace": "maichess.events.matchmaking",
+  "doc": "Value schema for the matchmaking.commands.v1 topic.",
+  "fields": [
+    { "name": "event_id", "type": "string" },
+    { "name": "event_type", "type": "string" },
+    { "name": "aggregate_id", "type": "string", "doc": "playerId (or created_by for bot-vs-bot)" },
+    { "name": "sequence", "type": "long", "default": 0 },
+    { "name": "occurred_at", "type": "long" },
+    { "name": "correlation_id", "type": "string", "default": "" },
+    { "name": "causation_id", "type": "string", "default": "" },
+    { "name": "producer", "type": "string" },
+    {
+      "name": "payload",
+      "type": [
+        {
+          "type": "record",
+          "name": "EnqueuePlayerCommand",
+          "fields": [
+            { "name": "player_id", "type": "string" },
+            { "name": "queue_token", "type": "string" },
+            { "name": "time_format_id", "type": "string" },
+            {
+              "name": "opponent_type",
+              "type": { "type": "enum", "name": "OpponentType", "symbols": ["HUMAN", "BOT"], "default": "HUMAN" }
+            },
+            { "name": "bot_id", "type": ["null", "string"], "default": null }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "DequeuePlayerCommand",
+          "fields": [
+            { "name": "player_id", "type": "string" },
+            { "name": "queue_token", "type": "string" }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "RequestBotVsBotCommand",
+          "fields": [
+            { "name": "created_by", "type": "string" },
+            { "name": "white_bot_id", "type": "string" },
+            { "name": "black_bot_id", "type": "string" },
+            { "name": "time_format_id", "type": "string" },
+            { "name": "start_fen", "type": "string", "default": "" }
+          ]
+        }
+      ]
+    }
+  ]
+}

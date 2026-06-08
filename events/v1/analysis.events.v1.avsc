@@ -1,0 +1,62 @@
+{
+  "type": "record",
+  "name": "AnalysisEvent",
+  "namespace": "maichess.events.analysis",
+  "doc": "Value schema for the analysis.events.v1 topic. Engine depth updates and stream lifecycle.",
+  "fields": [
+    { "name": "event_id", "type": "string" },
+    { "name": "event_type", "type": "string" },
+    { "name": "aggregate_id", "type": "string", "doc": "sessionId" },
+    { "name": "sequence", "type": "long", "default": 0 },
+    { "name": "occurred_at", "type": "long" },
+    { "name": "correlation_id", "type": "string", "default": "" },
+    { "name": "causation_id", "type": "string", "default": "" },
+    { "name": "producer", "type": "string" },
+    {
+      "name": "payload",
+      "type": [
+        {
+          "type": "record",
+          "name": "AnalysisDepthCompleted",
+          "fields": [
+            { "name": "session_id", "type": "string" },
+            { "name": "fen", "type": "string" },
+            { "name": "bot_id", "type": "string" },
+            { "name": "depth", "type": "int" },
+            {
+              "name": "lines",
+              "type": {
+                "type": "array",
+                "items": {
+                  "type": "record",
+                  "name": "PrincipalVariation",
+                  "fields": [
+                    { "name": "rank", "type": "int" },
+                    { "name": "evaluation_cp", "type": "int" },
+                    { "name": "moves", "type": { "type": "array", "items": "string" } }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "AnalysisCompleted",
+          "fields": [
+            { "name": "session_id", "type": "string" },
+            { "name": "final_depth", "type": "int" }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "AnalysisFailed",
+          "fields": [
+            { "name": "session_id", "type": "string" },
+            { "name": "message", "type": "string" }
+          ]
+        }
+      ]
+    }
+  ]
+}

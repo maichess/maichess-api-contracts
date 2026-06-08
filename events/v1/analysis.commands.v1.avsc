@@ -1,0 +1,36 @@
+{
+  "type": "record",
+  "name": "AnalysisCommand",
+  "namespace": "maichess.events.analysis",
+  "doc": "Value schema for the analysis.commands.v1 topic. Drives the Engine analysis stream processor.",
+  "fields": [
+    { "name": "event_id", "type": "string" },
+    { "name": "event_type", "type": "string" },
+    { "name": "aggregate_id", "type": "string", "doc": "sessionId" },
+    { "name": "sequence", "type": "long", "default": 0 },
+    { "name": "occurred_at", "type": "long" },
+    { "name": "correlation_id", "type": "string", "default": "" },
+    { "name": "causation_id", "type": "string", "default": "" },
+    { "name": "producer", "type": "string" },
+    {
+      "name": "payload",
+      "type": [
+        {
+          "type": "record",
+          "name": "StartAnalysisCommand",
+          "fields": [
+            { "name": "session_id", "type": "string" },
+            { "name": "fen", "type": "string" },
+            { "name": "bot_id", "type": "string" },
+            { "name": "line_count", "type": "int" }
+          ]
+        },
+        {
+          "type": "record",
+          "name": "StopAnalysisCommand",
+          "fields": [{ "name": "session_id", "type": "string" }]
+        }
+      ]
+    }
+  ]
+}

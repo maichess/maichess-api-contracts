@@ -3,7 +3,7 @@
 **Base URL:** `http://search-service`
 **Implementation:** ASP.NET
 
-Search over derived **Elasticsearch** read models (feature-prompts/13,
+Search over derived **Elasticsearch** read models (maichess-knowledge-base/tasks/implemented/13,
 [search-elasticsearch.md](../../maichess-knowledge-base/search-elasticsearch.md)). The indexes are
 projected from Mongo via CDC (`match.cdc.v1`) + the analysis-game change stream; **Elasticsearch
 is never a source of truth** — results carry ids + summary fields and the client hydrates detail

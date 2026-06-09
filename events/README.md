@@ -17,13 +17,13 @@ events/
     analysis.events.v1.avsc
     user.events.v1.avsc
     socket.outbound.v1.avsc       # fan-out envelope for client push
-    cheat.events.v1.avsc          # anti-cheat flag state per user (feature-prompts/14)
+    cheat.events.v1.avsc          # anti-cheat flag state per user (maichess-knowledge-base/tasks/implemented/14)
 ```
 
 > **CDC streams** `user.cdc.v1` / `match.cdc.v1` (Debezium, see
 > [change-data-capture.md](../../maichess-knowledge-base/change-data-capture.md)) are **internal**
 > raw change streams, not consumer contracts — they have no `.avsc` here and are produced by Kafka
-> Connect, not by services. As of `feature-prompts/10` the public `user.events.v1` schema below is
+> Connect, not by services. As of `maichess-knowledge-base/tasks/implemented/10` the public `user.events.v1` schema below is
 > **curated from `user.cdc.v1`** (a relay maps CDC change rows → this envelope); the schema is
 > unchanged, only its production path moved. Consume `user.events.v1`, never `user.cdc.v1`.
 

@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package maichess.events.v1;
+
+option csharp_namespace = "Maichess.Events.V1";
+option java_multiple_files = true;
+option java_package = "maichess.events.v1";
+
+// Protobuf re-encoding of events/v1/matchmaking.events.v1.avsc
+// (Avro namespace maichess.events.matchmaking). Re-encoding, not a redesign.
+//
+// Value schema for the matchmaking.events.v1 topic.
+message MatchmakingEvent {
+  string event_id = 1;
+  string event_type = 2;
+  // playerId
+  string aggregate_id = 3;
+  int64 sequence = 4;
+  // epoch ms
+  int64 occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  string producer = 8;
+  oneof payload {
+    PlayerEnqueued player_enqueued = 9;
+    PlayerDequeued player_dequeued = 10;
+    PlayersMatched players_matched = 11;
+  }
+}
+
+message PlayerEnqueued {
+  string player_id = 1;
+  string queue_token = 2;
+  string time_format_id = 3;
+}
+
+message PlayerDequeued {
+  string player_id = 1;
+  string queue_token = 2;
+}
+
+// Two players paired; the matchmaker follows up with a CreateMatchCommand and
+// correlates the resulting MatchCreated to push `matched`.
+message PlayersMatched {
+  string white_user_id = 1;
+  string black_user_id = 2;
+  string time_format_id = 3;
+}

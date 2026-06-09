@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package maichess.events.v1;
+
+option csharp_namespace = "Maichess.Events.V1";
+option java_multiple_files = true;
+option java_package = "maichess.events.v1";
+
+// Protobuf re-encoding of events/v1/analysis.commands.v1.avsc
+// (Avro namespace maichess.events.analysis). Re-encoding, not a redesign.
+//
+// Value schema for the analysis.commands.v1 topic. Drives the Engine analysis
+// stream processor.
+message AnalysisCommand {
+  string event_id = 1;
+  string event_type = 2;
+  // sessionId
+  string aggregate_id = 3;
+  int64 sequence = 4;
+  // epoch ms
+  int64 occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  string producer = 8;
+  oneof payload {
+    StartAnalysisCommand start_analysis = 9;
+    StopAnalysisCommand stop_analysis = 10;
+  }
+}
+
+message StartAnalysisCommand {
+  string session_id = 1;
+  string fen = 2;
+  string bot_id = 3;
+  int32 line_count = 4;
+}
+
+message StopAnalysisCommand {
+  string session_id = 1;
+}

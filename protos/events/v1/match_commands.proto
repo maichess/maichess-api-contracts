@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package maichess.events.v1;
+
+import "events/v1/match_events.proto";
+
+option csharp_namespace = "Maichess.Events.V1";
+option java_multiple_files = true;
+option java_package = "maichess.events.v1";
+
+// Protobuf re-encoding of events/v1/match.commands.v1.avsc
+// (Avro namespace maichess.events.match). Re-encoding, not a redesign.
+//
+// Value schema for the match.commands.v1 topic. Commands are intents directed
+// at a match aggregate; the Match Manager command handler validates them
+// against the read model and emits facts to match.events.v1. Player,
+// TimeFormat, MatchSource, MatchStatus and EndReason are shared with — and
+// imported from — match_events.proto.
+message MatchCommand {
+  string event_id = 1;
+  string event_type = 2;
+  // matchId; for CreateMatch the caller mints a new uuid
+  string aggregate_id = 3;
+  int64 sequence = 4;
+  // epoch ms
+  int64 occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  string producer = 8;
+  oneof payload {
+    CreateMatchCommand create_match = 9;
+    SubmitMoveCommand submit_move = 10;
+    ResignCommand resign = 11;
+    OfferDrawCommand offer_draw = 12;
+    AcceptDrawCommand accept_draw = 13;
+    DeclineDrawCommand decline_draw = 14;
+    SyncExternalCommand sync_external = 15;
+  }
+}
+
+message CreateMatchCommand {
+  Player white = 1;
+  Player black = 2;
+  TimeFormat time_format = 3;
+  Player created_by = 4;
+  string start_fen = 5;
+  MatchSource source = 6;
+  string external_provider = 7;
+  string external_ref = 8;
+}
+
+message SubmitMoveCommand {
+  string by_user_id = 1;
+  string move_uci = 2;
+}
+
+message ResignCommand {
+  string by_user_id = 1;
+}
+
+message OfferDrawCommand {
+  string by_user_id = 1;
+}
+
+message AcceptDrawCommand {
+  string by_user_id = 1;
+}
+
+message DeclineDrawCommand {
+  string by_user_id = 1;
+}
+
+// Tournament Bridge mirrors external-provider state; bypasses validation and
+// bot scheduling.
+message SyncExternalCommand {
+  string current_fen = 1;
+  repeated string moves = 2;
+  MatchStatus status = 3;
+  int64 white_time_ms = 4;
+  int64 black_time_ms = 5;
+  int64 finished_at_ms = 6;
+  EndReason end_reason = 7;
+}

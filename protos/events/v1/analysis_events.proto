@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package maichess.events.v1;
+
+option csharp_namespace = "Maichess.Events.V1";
+option java_multiple_files = true;
+option java_package = "maichess.events.v1";
+
+// Protobuf re-encoding of events/v1/analysis.events.v1.avsc
+// (Avro namespace maichess.events.analysis). Re-encoding, not a redesign.
+//
+// Value schema for the analysis.events.v1 topic. Engine depth updates and
+// stream lifecycle.
+message AnalysisEvent {
+  string event_id = 1;
+  string event_type = 2;
+  // sessionId
+  string aggregate_id = 3;
+  int64 sequence = 4;
+  // epoch ms
+  int64 occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  string producer = 8;
+  oneof payload {
+    AnalysisDepthCompleted analysis_depth_completed = 9;
+    AnalysisCompleted analysis_completed = 10;
+    AnalysisFailed analysis_failed = 11;
+  }
+}
+
+message AnalysisDepthCompleted {
+  string session_id = 1;
+  string fen = 2;
+  string bot_id = 3;
+  int32 depth = 4;
+  repeated PrincipalVariation lines = 5;
+}
+
+message PrincipalVariation {
+  int32 rank = 1;
+  int32 evaluation_cp = 2;
+  repeated string moves = 3;
+}
+
+message AnalysisCompleted {
+  string session_id = 1;
+  int32 final_depth = 2;
+}
+
+message AnalysisFailed {
+  string session_id = 1;
+  string message = 2;
+}

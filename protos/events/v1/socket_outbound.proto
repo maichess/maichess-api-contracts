@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package maichess.events.v1;
+
+option csharp_namespace = "Maichess.Events.V1";
+option java_multiple_files = true;
+option java_package = "maichess.events.v1";
+
+// Protobuf re-encoding of events/v1/socket.outbound.v1.avsc
+// (Avro namespace maichess.events.socket). This is a re-encoding, not a
+// redesign — field names and semantics match the Avro field-for-field.
+//
+// Value schema for the socket.outbound.v1 topic. The socket service consumes
+// this and fans out to clients over socket.io. Exactly one of
+// target_user_id / target_match_id is set: user_id for direct delivery
+// (e.g. matched, analysis_update), match_id for room broadcast
+// (e.g. move_made, match_ended).
+message OutboundEvent {
+  string event_id = 1;
+  string event_type = 2;
+  // userId or matchId, mirrors the target.
+  string aggregate_id = 3;
+  int64 sequence = 4;
+  // epoch ms
+  int64 occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  string producer = 8;
+  oneof payload {
+    SocketPush push = 9;
+  }
+}
+
+message SocketPush {
+  // Exactly one is set: user_id for direct delivery, match_id for room
+  // broadcast. (Avro modelled these as two union[null,string] fields with a
+  // "exactly one" doc constraint; oneof makes that constraint explicit, the
+  // same idiom Player.identity uses elsewhere in the contracts.)
+  oneof target {
+    string target_user_id = 1;
+    string target_match_id = 2;
+  }
+  // socket.io event name, e.g. move_made, match_ended, matched, analysis_update.
+  string event_name = 3;
+  // JSON-encoded event body delivered verbatim to the client.
+  string payload_json = 4;
+}

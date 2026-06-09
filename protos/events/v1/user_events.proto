@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package maichess.events.v1;
+
+option csharp_namespace = "Maichess.Events.V1";
+option java_multiple_files = true;
+option java_package = "maichess.events.v1";
+
+// Protobuf re-encoding of events/v1/user.events.v1.avsc
+// (Avro namespace maichess.events.user). Re-encoding, not a redesign.
+//
+// Value schema for the user.events.v1 topic (compacted). Profile and rating
+// facts emitted for downstream consumers.
+message UserEvent {
+  string event_id = 1;
+  string event_type = 2;
+  // userId
+  string aggregate_id = 3;
+  int64 sequence = 4;
+  // epoch ms
+  int64 occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  string producer = 8;
+  oneof payload {
+    UserRegistered user_registered = 9;
+    ProfileUpdated profile_updated = 10;
+    MatchResultRecorded match_result_recorded = 11;
+    RatingUpdated rating_updated = 12;
+  }
+}
+
+message UserRegistered {
+  string user_id = 1;
+  string username = 2;
+}
+
+message ProfileUpdated {
+  string user_id = 1;
+  string username = 2;
+  bool dev_mode = 3;
+}
+
+enum MatchOutcome {
+  MATCH_OUTCOME_UNSPECIFIED = 0;
+  MATCH_OUTCOME_WIN = 1;
+  MATCH_OUTCOME_LOSS = 2;
+  MATCH_OUTCOME_DRAW = 3;
+}
+
+// Emitted by Match Manager on match end; consumed by User to update Glicko-2
+// rating.
+message MatchResultRecorded {
+  string user_id = 1;
+  MatchOutcome outcome = 2;
+  double opponent_rating = 3;
+  double opponent_rd = 4;
+}
+
+// Emitted when a user's Glicko-2 rating and/or win/loss/draw tally change.
+// Carries the cumulative W/L/D so a Redis replica can materialise stats
+// without a GetUser RPC.
+message RatingUpdated {
+  string user_id = 1;
+  double rating = 2;
+  double rating_deviation = 3;
+  double volatility = 4;
+  int32 elo = 5;
+  int32 wins = 6;
+  int32 losses = 7;
+  int32 draws = 8;
+}

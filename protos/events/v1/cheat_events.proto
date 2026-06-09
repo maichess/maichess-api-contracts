@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package maichess.events.v1;
+
+option csharp_namespace = "Maichess.Events.V1";
+option java_multiple_files = true;
+option java_package = "maichess.events.v1";
+
+// Protobuf re-encoding of events/v1/cheat.events.v1.avsc
+// (Avro namespace maichess.events.cheat). Re-encoding, not a redesign.
+//
+// Value schema for the cheat.events.v1 topic (compacted). Anti-cheat flag
+// state per user, emitted by maichess-anticheat-service and consumed by the
+// user read models / Match Maker. Evidence stays in anticheat-db; only the
+// flag state propagates here.
+message CheatEvent {
+  string event_id = 1;
+  // e.g. cheat.PlayerFlagged
+  string event_type = 2;
+  // userId
+  string aggregate_id = 3;
+  int64 sequence = 4;
+  // epoch ms
+  int64 occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  string producer = 8;
+  oneof payload {
+    PlayerFlagged player_flagged = 9;
+    PlayerUnflagged player_unflagged = 10;
+    LiveSuspicionRaised live_suspicion_raised = 11;
+  }
+}
+
+enum Detector {
+  DETECTOR_UNSPECIFIED = 0;
+  DETECTOR_ENGINE_CORRELATION = 1;
+  DETECTOR_STATISTICAL = 2;
+  DETECTOR_COMBINED = 3;
+}
+
+// Durable verdict from the reconciled post-game analysis. Sets flagged=true on
+// the user read models.
+message PlayerFlagged {
+  string user_id = 1;
+  // anticheat-db case holding the evidence
+  string case_id = 2;
+  // combined suspicion score that crossed threshold
+  double score = 3;
+  // short human-readable reason for the Dev overview
+  string summary = 4;
+  Detector detector = 5;
+}
+
+// Dev cleared a flag (false positive). Sets flagged=false on the user read
+// models.
+message PlayerUnflagged {
+  string user_id = 1;
+  string case_id = 2;
+  // dev user id (audit)
+  string unflagged_by = 3;
+  string reason = 4;
+}
+
+// Advisory signal from the in-game stream processor. NOT a durable flag —
+// reconciled by the post-game pass. Consumers must not set the persistent flag
+// from this.
+message LiveSuspicionRaised {
+  string user_id = 1;
+  string match_id = 2;
+  int32 ply = 3;
+  double score = 4;
+}

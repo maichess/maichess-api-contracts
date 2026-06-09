@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+package maichess.events.v1;
+
+option csharp_namespace = "Maichess.Events.V1";
+option java_multiple_files = true;
+option java_package = "maichess.events.v1";
+
+// Protobuf re-encoding of events/v1/match.events.v1.avsc
+// (Avro namespace maichess.events.match). Re-encoding, not a redesign.
+//
+// Value schema for the match.events.v1 topic. The match event log is the
+// source of truth for the match domain; match state is a projection of this
+// stream. The shared Player / TimeFormat / MatchStatus / MatchSource /
+// EndReason types defined here are also imported by match_commands.proto.
+message MatchEvent {
+  // uuid, idempotency key
+  string event_id = 1;
+  // e.g. match.MoveApplied
+  string event_type = 2;
+  // matchId, the partition key
+  string aggregate_id = 3;
+  // per-match monotonic sequence
+  int64 sequence = 4;
+  // epoch ms
+  int64 occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  string producer = 8;
+  oneof payload {
+    MatchCreated match_created = 9;
+    MoveSubmitted move_submitted = 10;
+    MoveValidated move_validated = 11;
+    MoveRejected move_rejected = 12;
+    MoveApplied move_applied = 13;
+    BotMoveRequested bot_move_requested = 14;
+    BotMoveCalculated bot_move_calculated = 15;
+    DrawOffered draw_offered = 16;
+    DrawDeclined draw_declined = 17;
+    MatchEnded match_ended = 18;
+  }
+}
+
+// Player is either a human user, a bot, or an external (non-maichess)
+// participant. Exactly one identity field is set (Avro modelled the three as
+// union[null,string]; oneof makes the "exactly one" constraint explicit).
+message Player {
+  oneof identity {
+    string user_id = 1;
+    string bot_id = 2;
+    // Display name for a player that exists only on an external provider.
+    string external_name = 3;
+  }
+}
+
+// TimeFormat describes the clock rules for a match.
+message TimeFormat {
+  string id = 1;
+  int64 base_ms = 2;
+  int64 increment_ms = 3;
+  string category = 4;
+}
+
+enum MatchStatus {
+  MATCH_STATUS_UNSPECIFIED = 0;
+  MATCH_STATUS_ONGOING = 1;
+  MATCH_STATUS_WHITE_WON = 2;
+  MATCH_STATUS_BLACK_WON = 3;
+  MATCH_STATUS_DRAW = 4;
+}
+
+enum MatchSource {
+  MATCH_SOURCE_UNSPECIFIED = 0;
+  MATCH_SOURCE_NATIVE = 1;
+  MATCH_SOURCE_EXTERNAL = 2;
+}
+
+enum EndReason {
+  END_REASON_UNSPECIFIED = 0;
+  END_REASON_CHECKMATE = 1;
+  END_REASON_RESIGNATION = 2;
+  END_REASON_STALEMATE = 3;
+  END_REASON_TIMEOUT = 4;
+  END_REASON_DRAW_AGREEMENT = 5;
+  END_REASON_FIFTY_MOVE_RULE = 6;
+  END_REASON_THREEFOLD_REPETITION = 7;
+  END_REASON_INSUFFICIENT_MATERIAL = 8;
+}
+
+// Result of validating a move. UNSPECIFIED maps the Avro GameResult.NONE
+// ("no result yet"), which the registry's zero-value rules forbid naming NONE.
+enum GameResult {
+  GAME_RESULT_UNSPECIFIED = 0;
+  GAME_RESULT_WHITE_WON = 1;
+  GAME_RESULT_BLACK_WON = 2;
+  GAME_RESULT_STALEMATE = 3;
+  GAME_RESULT_FIFTY_MOVE_RULE = 4;
+  GAME_RESULT_THREEFOLD_REPETITION = 5;
+  GAME_RESULT_INSUFFICIENT_MATERIAL = 6;
+}
+
+message MatchCreated {
+  Player white = 1;
+  Player black = 2;
+  TimeFormat time_format = 3;
+  Player created_by = 4;
+  string start_fen = 5;
+  MatchSource source = 6;
+  string external_provider = 7;
+  string external_ref = 8;
+}
+
+// A move accepted into the pipeline; carries the opaque position_history blob
+// owned by the validator.
+message MoveSubmitted {
+  string move_uci = 1;
+  Player by = 2;
+  string fen = 3;
+  repeated string position_history = 4;
+}
+
+message MoveValidated {
+  string resulting_fen = 1;
+  GameResult game_result = 2;
+  repeated string position_history = 3;
+}
+
+message MoveRejected {
+  string move_uci = 1;
+  string reason = 2;
+}
+
+message MoveApplied {
+  string move_uci = 1;
+  string resulting_fen = 2;
+  int32 index = 3;
+  Player player = 4;
+  int64 white_time_ms = 5;
+  int64 black_time_ms = 6;
+  int64 applied_at_ms = 7;
+}
+
+message BotMoveRequested {
+  string fen = 1;
+  string bot_id = 2;
+  optional int32 time_limit_ms = 3;
+  // dedupe key for the engine
+  string request_id = 4;
+}
+
+message BotMoveCalculated {
+  string move_uci = 1;
+  int32 evaluation_cp = 2;
+  string request_id = 3;
+}
+
+message DrawOffered {
+  Player by = 1;
+}
+
+message DrawDeclined {
+  Player by = 1;
+}
+
+message MatchEnded {
+  MatchStatus status = 1;
+  EndReason end_reason = 2;
+  int64 finished_at_ms = 3;
+}

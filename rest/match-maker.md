@@ -67,14 +67,23 @@ Enter the matchmaking queue.
 | `time_format_id` | string | Yes | One of the `id` values returned by `GET /time-formats` |
 | `opponent.type` | string | Yes | `human` or `bot` |
 | `opponent.bot_id` | string | Conditional | Required when `opponent.type` is `bot` |
+| `allow_flagged` | boolean | No | Allow being matched with players previously flagged by anti-cheat. Default `false` (disallow). Ignored for bot opponents. |
 
 Human opponent:
 ```json
 {
   "time_format_id": "5+0",
-  "opponent": { "type": "human" }
+  "opponent": { "type": "human" },
+  "allow_flagged": false
 }
 ```
+
+`allow_flagged` is a per-search matchmaking *filter*, not a ban: a pair is admissible
+only if neither side is anti-cheat-flagged from the other's perspective — i.e. a flagged
+player is paired only with searchers who set `allow_flagged: true`, and a flagged
+searcher is likewise only paired with opponents who allow flagged players (or other
+flagged players who do). Flag state comes from the Match Maker's `cheat.events.v1` read
+model; bot matches are unaffected.
 
 Bot opponent:
 ```json

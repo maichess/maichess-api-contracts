@@ -193,10 +193,17 @@ Submit a move on behalf of the authenticated player.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `move` | string | Yes | Move in UCI notation (e.g. `e2e4`, `e7e8q` for promotion) |
+| `premove` | boolean | No | The move was committed as a pre-move (queued before the opponent moved). Default `false`. |
 
 ```json
-{ "move": "e2e4" }
+{ "move": "e2e4", "premove": false }
 ```
+
+`premove` is client-asserted and rides the move events (`MoveSubmitted.premove` →
+`MoveApplied.premove`) so anti-cheat can exempt the ply from think-time analysis —
+pre-moves legitimately arrive with near-zero think time. It has no effect on move
+validation or clocks, and it only *reduces timing-based* suspicion (correlation evidence
+is unaffected), so asserting it on every move cannot mask engine assistance.
 
 **`202 Accepted`** — the move command was accepted; the response has no body. The move is
 validated and applied asynchronously (the event-sourced move loop), and the authoritative

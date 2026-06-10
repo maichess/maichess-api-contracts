@@ -108,6 +108,11 @@ message MatchCreated {
   MatchSource source = 6;
   string external_provider = 7;
   string external_ref = 8;
+  // Engine-configured elo snapshot for a bot side, resolved once at creation
+  // so the rating consumer can rate a human against the bot's strength at play
+  // time without a synchronous engine lookup. Unset for human sides.
+  optional double white_bot_elo = 9;
+  optional double black_bot_elo = 10;
 }
 
 // A move accepted into the pipeline; carries the opaque position_history blob
@@ -162,8 +167,20 @@ message DrawDeclined {
   Player by = 1;
 }
 
+// Carries a participant/source snapshot (projected from MatchCreated) so the
+// rating consumer (user-service, kafka task 08) is stateless: one MatchEnded
+// holds everything needed to derive each human's outcome and the opponent's
+// bot strength. Events written before these fields existed leave them unset.
 message MatchEnded {
   MatchStatus status = 1;
   EndReason end_reason = 2;
   int64 finished_at_ms = 3;
+  Player white = 4;
+  Player black = 5;
+  MatchSource source = 6;
+  // Engine-configured elo snapshotted at creation; unset for human sides or
+  // for matches created before the snapshot existed (consumers fall back to
+  // the unknown-bot rating of 0).
+  optional double white_bot_elo = 7;
+  optional double black_bot_elo = 8;
 }

@@ -198,13 +198,18 @@ Submit a move on behalf of the authenticated player.
 { "move": "e2e4" }
 ```
 
-**`200 OK`** — updated Match object (same schema as `GET /matches/{id}`)
+**`202 Accepted`** — the move command was accepted; the response has no body. The move is
+validated and applied asynchronously (the event-sourced move loop), and the authoritative
+result is delivered over the socket connection as a `move_made` event (or `match_ended`
+when the move ends the game). Clients apply the move optimistically and reconcile on the
+socket event. Move legality is decided asynchronously, so an illegal move is accepted here
+(202) and surfaced over the socket rather than as a `400`.
 
-After a move is accepted the mover's clock is decremented by the time they took, then `increment_ms` is added back when the match is still ongoing. A move that triggers a timeout or game-ending result does not receive the increment.
+After a move is applied the mover's clock is decremented by the time they took, then `increment_ms` is added back when the match is still ongoing. A move that triggers a timeout or game-ending result does not receive the increment.
 
-**`400 Bad Request`** — move is illegal; body contains `{"error": "reason"}`
 **`401 Unauthorized`**
 **`403 Forbidden`** — not a participant, or not the requestor's turn
+**`404 Not Found`** — no such match
 **`409 Conflict`** — match has already ended
 
 ---
@@ -221,11 +226,19 @@ Forfeit the match on behalf of the authenticated player.
 |---|---|---|
 | `id` | UUID | Match ID |
 
-**`200 OK`** — final Match object with `status` set to `white_won` or `black_won`
+**`202 Accepted`** — the resignation command was accepted; the response has no body. The
+match end is applied asynchronously and delivered over the socket as a `match_ended` event
+(`status` `white_won` or `black_won`, reason `resignation`).
 
 **`401 Unauthorized`**
 **`403 Forbidden`** — not a participant
+**`404 Not Found`** — no such match
 **`409 Conflict`** — match has already ended
+
+> **Draw offers** (`POST /matches/{id}/draw-offer`, `POST .../draw-offer/accept`,
+> `DELETE .../draw-offer`) follow the same command model: each returns **`202 Accepted`**
+> and the result is delivered over the socket (`draw_offered`, `match_ended` with reason
+> `draw_agreement`, or `draw_declined`).
 
 ---
 

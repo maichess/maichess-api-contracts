@@ -122,6 +122,12 @@ message MoveSubmitted {
   Player by = 2;
   string fen = 3;
   repeated string position_history = 4;
+  // Client-asserted: the move was committed as a pre-move (queued before the
+  // opponent moved), so its near-zero think time is legitimate. Consumed by
+  // anti-cheat to exempt the ply from timing analysis (and downweight it in
+  // correlation) — it never erases engine-correlation evidence, so asserting
+  // it on every move cannot hide cheating.
+  bool premove = 5;
 }
 
 message MoveValidated {
@@ -143,6 +149,9 @@ message MoveApplied {
   int64 white_time_ms = 5;
   int64 black_time_ms = 6;
   int64 applied_at_ms = 7;
+  // Carried over from MoveSubmitted.premove by the projector. See the
+  // MoveSubmitted field comment for semantics.
+  bool premove = 8;
 }
 
 message BotMoveRequested {

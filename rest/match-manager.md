@@ -97,6 +97,37 @@ Bot-vs-bot games a user spawns are listed here via `created_by` attribution even
 
 ---
 
+## GET /matches/search
+
+Global, filterable, chronological browse over **every** match on the platform — native human games, arena bot-vs-bot games, and mirrored external games — surfaced uniformly with their source tag. Powers the Dev "All games" browser.
+
+This is a **cross-user** query and complements `maichess-search-service`'s `GET /search/matches`: that endpoint does per-user faceted/full-text/position search over the Elasticsearch read model (best-effort id labels); this one returns a chronological feed across all users with match-manager-resolved player labels (usernames and bot names) and first-class **initiator** attribution. Use search-service for full-text/opening/position lookups; use this for structured chronological browsing.
+
+**Auth:** Bearer token. The data is consistent with the existing access model (ended matches readable via `GET /matches/{id}`, ongoing ones already listed by Watch), so a global chronological list widens nothing. The **UI** is `dev_mode`-gated; the client proxy (which already has the user) is the place for any additional server-side dev gating — match-manager is not coupled to user-service for this.
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `player_id` | UUID | No | Restrict to matches where this user is white **or** black. Empty = no participant filter. |
+| `initiator_id` | UUID | No | Restrict to matches whose `created_by` is this user. Empty = no filter; primarily meaningful for bot-vs-bot games. |
+| `status` | string | No | `all` (default), `ongoing`, or `ended`. |
+| `source` | string | No | `all` (default), `native`, or `external`. |
+| `since_ms` | integer | No | Inclusive lower bound on `finished_at_ms` (Unix ms). `0`/omitted = unbounded. |
+| `until_ms` | integer | No | Inclusive upper bound on `finished_at_ms` (Unix ms). `0`/omitted = unbounded. |
+| `ascending` | boolean | No | Chronological sort direction over `finished_at_ms`. `false` (default) = newest first; `true` = oldest first. |
+| `page` | integer | No | 1-based page number (default: 1) |
+| `page_size` | integer | No | Results per page, max 100 (default: 20) |
+
+When `player_id` and `initiator_id` are both supplied they are **AND**ed (matches where the user participates *and* the initiator started it). The `since_ms`/`until_ms` bounds key on `finished_at_ms`, so ongoing matches (`finished_at_ms = 0`) fall outside any positive lower bound.
+
+**`200 OK`** — same paginated envelope and summary schema as `GET /matches` (including `created_by`, `source`, `external_provider`, and `finished_at_ms`), ordered by `finished_at_ms` (descending unless `ascending=true`).
+
+**`400 Bad Request`** — invalid `status` or `source`
+**`401 Unauthorized`**
+
+---
+
 ## GET /matches/{id}
 
 Return the current state of a match. Any authenticated user may read an ongoing match (so spectators in Watch mode can load the board); access to finished matches is restricted to participants.

@@ -30,6 +30,13 @@ service Matches {
   // under the client's Profile tab.
   rpc ListUserMatches(ListUserMatchesRequest) returns (ListUserMatchesResponse);
 
+  // SearchMatches returns a paginated, chronologically ordered list of matches
+  // across every game on the platform (native human, arena bot-vs-bot, and
+  // mirrored external), with optional filters by participant, initiator, status,
+  // source, and time range. Powers the Dev "All games" browser. The chronological
+  // ordering and the since_ms/until_ms bounds key on finished_at_ms.
+  rpc SearchMatches(SearchMatchesRequest) returns (SearchMatchesResponse);
+
   // MakeMove applies a validated move to a match.
   rpc MakeMove(MakeMoveRequest) returns (MakeMoveResponse);
 
@@ -209,6 +216,45 @@ message ListUserMatchesRequest {
 }
 
 message ListUserMatchesResponse {
+  repeated Match matches = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+// SearchMatches is a global, filterable, chronological query over every match on
+// the platform (native human, arena bot-vs-bot, and mirrored external). It powers
+// the Dev "All games" browser and complements maichess-search-service: that service
+// does per-user faceted/full-text/position search over an Elasticsearch read model
+// with best-effort id labels, whereas this returns a cross-user chronological feed
+// with match-manager-resolved player labels and first-class initiator attribution.
+message SearchMatchesRequest {
+  // Filter to matches where this user is white or black. Empty = no participant
+  // filter.
+  string player_id = 1;
+  // Filter to matches whose created_by is this user. Empty = no filter. Primarily
+  // meaningful for bot-vs-bot games (attributes the human who spawned them).
+  string initiator_id = 2;
+  // ONGOING / ENDED filter; UNSPECIFIED returns matches in any status.
+  MatchStatusFilter status = 3;
+  // NATIVE / EXTERNAL filter; UNSPECIFIED returns matches of any source.
+  MatchSource source = 4;
+  // Optional inclusive lower bound on the chronological timestamp (finished_at_ms,
+  // Unix ms). 0 = unbounded.
+  int64 since_ms = 5;
+  // Optional inclusive upper bound on the chronological timestamp (finished_at_ms,
+  // Unix ms). 0 = unbounded.
+  int64 until_ms = 6;
+  // Chronological sort direction over finished_at_ms. false (default) = newest
+  // first; true = oldest first.
+  bool ascending = 7;
+  // 1-based page number; 0 is treated as 1.
+  int32 page = 8;
+  // Defaults to 20 when 0; capped at 100.
+  int32 page_size = 9;
+}
+
+message SearchMatchesResponse {
   repeated Match matches = 1;
   int32 total = 2;
   int32 page = 3;

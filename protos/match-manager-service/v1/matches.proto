@@ -7,11 +7,14 @@ option java_multiple_files = true;
 option java_package = "maichess.match_manager.v1.matches";
 
 // Matches instantiates and manages chess match state.
-// CreateMatch is called by Match Maker; all other RPCs are used internally
-// and reflected back to clients via the Match Manager REST API.
-// Real-time events are pushed to clients by calling Socket.BroadcastMatchEvent
-// on the socket service — see MatchEvent and its variants below for payload
-// shapes.
+// CreateMatch is called by Match Maker; the remaining RPCs are queries / external
+// sync used internally and reflected back to clients via the Match Manager REST API.
+// Real-time events are published to the socket.outbound.v1 Kafka topic (the socket
+// service fans them out) — see MatchEvent and its variants below for payload shapes.
+//
+// MakeMove and ResignMatch were removed in Kafka task 09: the move/resign write path
+// is event-sourced (REST publishes a command to match.commands.v1 / the move loop runs
+// on match.events.v1), not a synchronous RPC.
 service Matches {
   // CreateMatch is called by Match Maker once an opponent has been found.
   rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
@@ -29,12 +32,6 @@ service Matches {
   // by default and ordered newest first. Used to power the Past Matches view
   // under the client's Profile tab.
   rpc ListUserMatches(ListUserMatchesRequest) returns (ListUserMatchesResponse);
-
-  // MakeMove applies a validated move to a match.
-  rpc MakeMove(MakeMoveRequest) returns (MakeMoveResponse);
-
-  // ResignMatch forfeits the match on behalf of a player.
-  rpc ResignMatch(ResignMatchRequest) returns (ResignMatchResponse);
 
   // GetMatchPosition returns the board state at a specific point in the move
   // history. Available for matches where at least one side is a bot, and for
@@ -215,28 +212,8 @@ message ListUserMatchesResponse {
   int32 page_size = 4;
 }
 
-message MakeMoveRequest {
-  string match_id = 1;
-  string user_id = 2;
-  // Move in UCI notation.
-  string move = 3;
-}
-
-message MakeMoveResponse {
-  Match match = 1;
-}
-
-message ResignMatchRequest {
-  string match_id = 1;
-  string user_id = 2;
-}
-
-message ResignMatchResponse {
-  Match match = 1;
-}
-
-// MatchEvent and its variants define the payload shapes Match Manager sends to
-// clients via Socket.BroadcastMatchEvent. The event name maps to each oneof
+// MatchEvent and its variants define the payload shapes Match Manager publishes to
+// clients via the socket.outbound.v1 Kafka topic. The event name maps to each oneof
 // field name (e.g. "move_made", "match_ended", "draw_offered", "draw_declined").
 message MatchEvent {
   oneof event {

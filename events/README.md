@@ -1,76 +1,76 @@
-# Event Contracts (Avro)
+# Event Contracts (Protobuf)
 
-Source of truth for all **Kafka event and command schemas**. Proto (`../protos`) remains the
-source of truth for the surviving synchronous query/storage RPCs; this directory covers the
-event-driven flows introduced by [event-driven-architecture.md](../../maichess-knowledge-base/event-driven-architecture.md).
+Source of truth for all **Kafka event and command schemas**. As of the
+[Kafka Protobuf migration](../../maichess-knowledge-base/knowledge/architecture/serialization-protobuf-migration.md)
+(program `tasks/planned/kafka/`, completed in task `09`) every topic is **Protobuf**, serialized
+as **raw Protobuf bytes** — the Confluent Schema Registry has been removed. The schemas live under
+[`../protos/events/v1/`](../protos/events/v1/) (package `maichess.events.v1`) alongside the
+surviving synchronous query/storage RPCs; this directory no longer holds any `.avsc` (the original
+Avro schemas were retired per-topic during the migration). See
+[event-driven-architecture.md](../../maichess-knowledge-base/knowledge/architecture/event-driven-architecture.md).
 
 ## Layout
 
 ```
-events/
-  v1/
-    match.commands.v1.avsc        # commands directed at the match aggregate
-    match.events.v1.avsc          # the match event log (source of truth)
-    matchmaking.commands.v1.avsc
-    matchmaking.events.v1.avsc
-    analysis.commands.v1.avsc
-    analysis.events.v1.avsc
-    user.events.v1.avsc
-    socket.outbound.v1.avsc       # fan-out envelope for client push
-    cheat.events.v1.avsc          # anti-cheat flag state per user (maichess-knowledge-base/tasks/implemented/14)
+protos/events/v1/
+  match_commands.proto       # commands directed at the match aggregate
+  match_events.proto         # the match event log (source of truth)
+  matchmaking_events.proto
+  analysis_commands.proto
+  analysis_events.proto
+  user_events.proto
+  socket_outbound.proto      # fan-out envelope for client push
+  cheat_events.proto         # anti-cheat flag state per user
 ```
 
 > **CDC streams** `user.cdc.v1` / `match.cdc.v1` (Debezium, see
-> [change-data-capture.md](../../maichess-knowledge-base/change-data-capture.md)) are **internal**
-> raw change streams, not consumer contracts — they have no `.avsc` here and are produced by Kafka
-> Connect, not by services. As of `maichess-knowledge-base/tasks/implemented/10` the public `user.events.v1` schema below is
-> **curated from `user.cdc.v1`** (a relay maps CDC change rows → this envelope); the schema is
-> unchanged, only its production path moved. Consume `user.events.v1`, never `user.cdc.v1`.
+> [change-data-capture.md](../../maichess-knowledge-base/knowledge/architecture/change-data-capture.md))
+> are **internal** raw change streams, not consumer contracts — they have no schema here and are
+> produced by Kafka Connect, not by services. The public `user.events.v1` schema is **curated from
+> `user.cdc.v1`** (a relay maps CDC change rows → the `UserEvent` envelope). Consume
+> `user.events.v1`, never `user.cdc.v1`.
 
-One Avro schema per topic. Each schema is the **topic value** schema: an envelope record whose
-`payload` field is a union of the concrete event/command records for that topic. Keys are plain
-strings (the aggregate id) and are not Avro-encoded.
+One Protobuf message per topic value: an envelope message whose `payload` is a `oneof` of the
+concrete event/command messages for that topic. Keys are plain strings (the aggregate id) and are
+not Protobuf-encoded.
 
 ## Envelope
 
-Every topic value record begins with the same header fields, then a `payload` union:
+Every topic value message begins with the same header fields, then a `oneof payload`:
 
-| Field | Avro type | Purpose |
+| Field | Type | Purpose |
 |---|---|---|
 | `event_id` | string (uuid) | idempotency key |
 | `event_type` | string | e.g. `match.MoveApplied` |
 | `aggregate_id` | string | partition key (matchId, playerId, sessionId, userId) |
-| `sequence` | long | per-aggregate monotonic; dedupe + gap detection |
-| `occurred_at` | long | event time, epoch ms |
+| `sequence` | int64 | per-aggregate monotonic; dedupe + gap detection |
+| `occurred_at` | int64 | event time, epoch ms |
 | `correlation_id` | string | one logical flow (a move round-trip) |
 | `causation_id` | string | the `event_id` that caused this one (empty if originating) |
 | `producer` | string | emitting service name |
-| `payload` | union | the typed body (see each schema) |
+| `payload` | oneof | the typed body (see each schema) |
 
-## Schema Registry
+## Serialization
 
-- One subject per topic, named `<topic>-value` (TopicNameStrategy).
-- Compatibility: **BACKWARD** (new schema can read old data). Add fields with defaults; never
-  remove or rename a field in place — introduce a new union branch or a `v2` topic.
-- Avro enums carry a `default` symbol so unknown future symbols degrade gracefully.
-
-Topics are created by the `kafka-topics-init` Job in
-[maichess-deploy](../../maichess-deploy). Schemas register with the registry on first produce
-(Confluent serdes default to `auto.register.schemas=true`); a CI step in this repo may
-pre-register them against the registry to gate breaking changes before deploy.
+- **Raw Protobuf bytes** — `message.ToByteArray()` / `Parser.ParseFrom(bytes)` (C#),
+  `companion.parseFrom`/`toByteArray` (Scala ScalaPB), `Message.decode`/`encode` (Node ts-proto).
+  No Schema Registry, no Confluent framing, no magic byte.
+- Compatibility is managed by Protobuf field rules: add fields with new tags; never reuse or
+  renumber a tag. Removing a field is allowed only if no producer/consumer still reads it.
+- Topics are created by the `kafka-topics-init` Job in
+  [maichess-deploy](../../maichess-deploy).
 
 ## Code generation per language
 
-No shared codegen step is mandated (Avro tooling differs per stack). Each service generates or
-loads types from these `.avsc` files at build time:
-
-- **C# (.NET):** `Chr.Avro` or `Apache.Avro` (`avrogen`), reading the `.avsc` from this package.
-- **Scala (ZIO):** `avro4s` schema derivation, with `zio-kafka` + Confluent Avro serde.
-- **Node (TS):** `@kafkajs/confluent-schema-registry` (runtime) and/or `avsc` for static types.
+Generated types ship in the `Maichess.PlatformProtos` package (C#/Scala/TS) published from this
+repo on a `v*` tag, exactly like the gRPC stubs. Services consume the generated `maichess.events.v1`
+types directly — there is no separate per-stack schema-loading step.
 
 ## Adding or changing an event
 
 Per the contract policy in the root `CLAUDE.md`: do not change a schema silently. Update the
-`.avsc`, run a registry compatibility check, note the change in the affected service's
-`CONTRACT_NOTES.md`, and keep [event-driven-architecture.md](../../maichess-knowledge-base/event-driven-architecture.md)
+`.proto` under `../protos/events/v1/`, run `buf lint` + `buf breaking`, note the change in the
+affected service's `CONTRACT_NOTES.md`, publish a new `Maichess.PlatformProtos` version, bump every
+consumer, and keep
+[event-driven-architecture.md](../../maichess-knowledge-base/knowledge/architecture/event-driven-architecture.md)
 in sync.

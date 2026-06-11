@@ -6,34 +6,21 @@ option csharp_namespace = "Maichess.Engine.V1";
 option java_multiple_files = true;
 option java_package = "maichess.engine.v1.bots";
 
-// Bots provides chess engine move calculation.
-// Called by: Match Manager
+// Bots provides chess engine bot enumeration and position analysis.
+// Called by: Match Manager (ListBots), Analysis service (AnalyzePosition, ListBots),
+// Tournament Bridge (ListBots).
+//
+// GetBestMove was removed in Kafka task 09: native bot moves are event-sourced over
+// match.events.v1 (BotMoveRequested/BotMoveCalculated) and external-game moves over the
+// engine.commands.v1 / engine.events.v1 request/reply pair — both served by the engine's
+// Kafka stream processors, not a synchronous RPC.
 service Bots {
-  // GetBestMove calculates the best move for the given position.
-  rpc GetBestMove(GetBestMoveRequest) returns (GetBestMoveResponse);
-
   // ListBots returns all available bot identifiers and metadata.
   rpc ListBots(ListBotsRequest) returns (ListBotsResponse);
 
   // AnalyzePosition streams progressively deeper multi-line evaluations until
   // the engine decides to stop (depth or improvement threshold — engine-internal).
   rpc AnalyzePosition(AnalyzePositionRequest) returns (stream AnalysisUpdate);
-}
-
-message GetBestMoveRequest {
-  // Current board position in FEN notation.
-  string fen = 1;
-  // Which bot logic to use.
-  string bot_id = 2;
-  // Time available for thinking in milliseconds. Absent means no time limit.
-  optional uint32 time_limit_ms = 3;
-}
-
-message GetBestMoveResponse {
-  // Chosen move in UCI notation (e.g. "e2e4", "e7e8q").
-  string move = 1;
-  // Position evaluation in centipawns from the moving side's perspective.
-  int32 evaluation_cp = 2;
 }
 
 message Bot {

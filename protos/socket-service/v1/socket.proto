@@ -2,39 +2,21 @@ syntax = "proto3";
 
 package socket.v1;
 
-import "google/protobuf/struct.proto";
+option csharp_namespace = "Socket.V1";
+option java_multiple_files = true;
+option java_package = "socket.v1";
 
-service Socket {
-  // Called by other services to push a WebSocket event to a single connected
-  // user across all of their open sockets.
-  rpc EmitEvent(EmitEventRequest) returns (EmitEventResponse);
-
-  // Called by Match Manager to push a WebSocket event to every client that has
-  // subscribed to a given match room (participants and spectators alike). The
-  // socket service joins / leaves connections to "match:<match_id>" rooms when
-  // it receives `subscribe_match` / `unsubscribe_match` client events; see
-  // rest/socket.md for the client-facing protocol.
-  rpc BroadcastMatchEvent(BroadcastMatchEventRequest) returns (BroadcastMatchEventResponse);
-}
-
-message EmitEventRequest {
-  string user_id = 1;
-  string event   = 2;
-  google.protobuf.Struct payload = 3;
-}
-
-message EmitEventResponse {
-  // true if the target user had an active connection and the event was sent.
-  bool delivered = 1;
-}
-
-message BroadcastMatchEventRequest {
-  string match_id = 1;
-  string event    = 2;
-  google.protobuf.Struct payload = 3;
-}
-
-message BroadcastMatchEventResponse {
-  // Number of socket connections that received the event.
-  int32 recipients = 1;
-}
+// The Socket gRPC service has been removed (Kafka task 09).
+//
+// Real-time delivery is now event-driven: producers publish an OutboundEvent to
+// the socket.outbound.v1 Kafka topic (see events/v1/socket_outbound.proto) and the
+// socket service consumes that topic and fans out to clients over socket.io. This
+// replaced both former RPCs:
+//   - EmitEvent (single-user push)       -> SocketPush.target_user_id
+//   - BroadcastMatchEvent (room fan-out) -> SocketPush.target_match_id
+//
+// The socket service still acts as a gRPC *client* of Auth.ValidateToken to
+// authenticate connecting clients; it no longer serves any gRPC endpoint.
+//
+// This file is retained to avoid a gap in the proto package version history. The
+// generated stubs package should be bumped to reflect the removal.

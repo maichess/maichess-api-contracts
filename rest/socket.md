@@ -3,7 +3,7 @@
 **Base URL:** `ws://socket-service`
 **Implementation:** Node.js / socket.io
 
-Gateway for all real-time push events. Clients maintain a single persistent socket.io connection here. Other services (Match Manager, Match Maker, Analysis) call `Socket.EmitEvent` over gRPC to deliver events to a connected user.
+Gateway for all real-time push events. Clients maintain a single persistent socket.io connection here. Other services (Match Manager, Match Maker, Analysis) publish an `OutboundEvent` to the `socket.outbound.v1` Kafka topic — either user-targeted (`target_user_id`) or match-room-targeted (`target_match_id`) — and this service consumes the topic and delivers the event to the connected client(s). (The former `Socket.EmitEvent` / `Socket.BroadcastMatchEvent` gRPC server was removed in Kafka task 09.)
 
 ---
 

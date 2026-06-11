@@ -3,7 +3,7 @@
 **Base URL:** `http://match-maker-service`
 **Implementation:** ASP.NET
 
-Handles session initialisation. For human opponents the service queues the player and waits for a peer; for bot opponents it resolves immediately. In both cases, once an opponent is found, Match Maker calls `Matches.CreateMatch` on Match Manager via gRPC and then calls `Socket.EmitEvent` to push a `matched` event containing the `match_id` to the client. Bot-vs-bot matches are created on demand via `POST /matches/bot-vs-bot` and bypass the queue entirely.
+Handles session initialisation. For human opponents the service queues the player and waits for a peer; for bot opponents it resolves immediately. In both cases, once an opponent is found, Match Maker creates the match on Match Manager (the human path publishes a match-creation fact to Kafka; the bot path still calls `Matches.CreateMatch` synchronously for `start_fen` validation) and publishes a `matched` event to `socket.outbound.v1` (user-targeted); the socket service delivers the `match_id` to the client. Bot-vs-bot matches are created on demand via `POST /matches/bot-vs-bot` and bypass the queue entirely.
 
 ---
 

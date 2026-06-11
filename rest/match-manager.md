@@ -3,7 +3,7 @@
 **Base URL:** `http://match-manager-service`
 **Implementation:** ASP.NET
 
-Accepts player moves and serves match state. Move validation is delegated to Move Validator via gRPC; bot moves are requested from Engine via gRPC after each ply. Real-time events (moves, match end, draw offers) are pushed to clients via the socket service — Match Manager calls `Socket.BroadcastMatchEvent` over gRPC after each state change so both participants and spectators receive them.
+Accepts player moves and serves match state. Player moves and resignations are accepted as commands (published to `match.commands.v1`) and projected asynchronously; move validation is delegated to Move Validator via gRPC, and native bot moves are event-sourced — the Engine consumes the move loop and replies with the bot's move on `match.events.v1`. Real-time events (moves, match end, draw offers) are pushed to clients via the socket service — Match Manager publishes an `OutboundEvent` to `socket.outbound.v1` (match-targeted) after each state change so both participants and spectators receive them.
 
 Player objects in responses are either a user `{"user_id": "...", "username": "..."}` or a bot `{"bot_id": "...", "name": "..."}`.
 

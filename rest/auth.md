@@ -12,9 +12,18 @@ Tokens are delivered and consumed exclusively via HttpOnly cookies — never in 
 | Cookie | Path | MaxAge | Description |
 |---|---|---|---|
 | `access_token` | `/` | 15 min | Signed JWT; sent to all services |
-| `refresh_token` | `/auth` | 30 days | Opaque UUID; only sent back to auth service endpoints |
+| `refresh_token` | `/api/auth` | 30 days | Opaque UUID; only sent to the auth proxy routes |
 
 Both cookies are `HttpOnly`, `SameSite=Lax`. `Secure` is enabled when `NODE_ENV=production` or `COOKIE_SECURE=true`. Domain is set via `COOKIE_DOMAIN` env var (optional; omit for localhost).
+
+> **`refresh_token` path.** The browser never talks to auth-service directly — it
+> reaches it only through the web client's Next.js proxy routes under `/api/auth/*`
+> (`/api/auth/refresh`, `/api/auth/logout`), which forward the cookie server-side. The
+> cookie path must therefore be `/api/auth` so the browser actually attaches it to those
+> requests. A `/auth`-scoped cookie is never sent to `/api/auth/refresh`, so refresh
+> silently 401s and the user is logged out the moment the 15-min access token expires.
+> The path scopes the long-lived refresh token to the auth routes only — it is not sent
+> on ordinary page or API navigation.
 
 ---
 

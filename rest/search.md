@@ -20,6 +20,22 @@ contracts. All JSON fields are `snake_case`.
 
 ---
 
+## Name matching (games vs matches)
+
+Free-text (`q`) and `opponent` match against a **searchable name blob** that carries every
+identifier of both players, with **partial (prefix) matching**: `magn` finds `Magnus`
+(an `edge_ngram` analyzer; prefixes only — `nus` does **not** find `Magnus`).
+
+What that blob contains differs by index, because of where the data comes from:
+
+- **Games** (`analysis_games`) — the analysis service denormalises resolved **human
+  usernames and bot display names** (plus ids) onto each game, so games are searchable by
+  full or partial **username / bot name / id**.
+- **Matches** (`matches`) — match-db stores **only player ids and bot ids** (no resolved
+  names; clients hydrate display names from match-manager). So match free-text matches
+  **user-ids and bot-ids**, not human usernames or bot display names. Full username/bot-name
+  search for matches is a documented follow-up (needs a user replica in search-service).
+
 ## GET /search/games
 
 Faceted / full-text search over the authenticated user's saved analysis games.
@@ -28,8 +44,8 @@ Faceted / full-text search over the authenticated user's saved analysis games.
 
 | Param | Type | Required | Description |
 |---|---|---|---|
-| `q` | string | No | Free text over PGN headers (event, site, player names, tags) |
-| `opponent` | string | No | Opponent display name (user, bot, or external) |
+| `q` | string | No | Free text over PGN headers, player usernames/bot names (full or partial), opening, tags |
+| `opponent` | string | No | Opponent username / bot name / id (full or partial) |
 | `opening` | string | No | Opening name or ECO code |
 | `result` | string | No | `1-0` \| `0-1` \| `1/2-1/2` \| `*` |
 | `source` | string | No | `pgn` \| `match` \| `fen` |
@@ -69,7 +85,8 @@ or `created_by`). Complements match-manager `ListUserMatches`; use this for rich
 
 | Param | Type | Required | Description |
 |---|---|---|---|
-| `opponent` | string | No | Opponent display name |
+| `q` | string | No | Free text over player ids / bot ids (full or partial). See **Name matching** above — match-db has no resolved usernames, so this does not match human usernames/bot display names |
+| `opponent` | string | No | Opponent id / bot id (full or partial) |
 | `result` | string | No | `white_won` \| `black_won` \| `draw` |
 | `source` | string | No | `native` \| `external` |
 | `external_provider` | string | No | e.g. `lichess` (only when `source=external`) |

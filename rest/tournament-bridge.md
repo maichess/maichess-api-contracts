@@ -5,7 +5,7 @@
 
 Proxies tournament lifecycle to an external tournament server, registers a maichess bot to play, drives moves via the Engine service, and mirrors each game into match-db as an `external` match. The bridge is the only maichess service that communicates with external tournament servers.
 
-All endpoints accept an optional `?server=<url>` query parameter to target a specific tournament server. When omitted, the configured default URL is used.
+All tournament endpoints accept an optional `?server=<url>` query parameter to target a specific tournament server. When omitted, the configured default URL is used. The `/external/*` endpoints target fixed third-party providers (currently Lichess) and ignore `?server`.
 
 Player objects in responses follow the same shape as Match Manager: `{"user_id": "...", "username": "..."}`, `{"bot_id": "...", "name": "..."}`, or `{"external_name": "..."}`.
 
@@ -333,3 +333,82 @@ Update bridge configuration.
 | `default_server_url` | string | Yes | Default tournament server URL |
 
 **`200 OK`** — updated config
+
+---
+
+## POST /external/lichess
+
+Register a maichess bot to play an existing **Lichess** game. The bridge opens the
+Lichess bot game stream, drives our moves with the Engine (engine-drives/we-mirror, same
+model as tournament-server games), submits them to Lichess, and mirrors the game into
+match-db as a read-only `external` match (provider `"lichess"`). The mirror match is
+created from Lichess's `gameFull` handshake before the response returns, so the resulting
+`match_id` is immediately watchable; the game then plays out in the background and lands
+in Past Matches tagged **External** and **unrated** (`RecordMatchResult` is never called).
+
+The Lichess account behind `lichess_token` must be a **bot account**, and the token must
+carry the bot scopes (`bot:play`). Clocks from Lichess are milliseconds and are mirrored
+verbatim (no conversion).
+
+**Auth:** Bearer token
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `bot_id` | string | Yes | Maichess bot to play (from `GET /bots`) |
+| `lichess_token` | string | Yes | Lichess bot-account OAuth token (bearer, `bot:play` scope) |
+| `game_id` | string | Yes | Lichess game id to play (e.g. the id of an accepted challenge) |
+
+```json
+{ "bot_id": "blitz-enhanced-3", "lichess_token": "lip_xxx", "game_id": "j0nPtcjl" }
+```
+
+**`200 OK`** — the game is being mirrored; `match_id` is the watchable match-db id
+
+```json
+{
+  "match_id": "a1b2c3d4-...",
+  "provider": "lichess"
+}
+```
+
+**`400 Bad Request`** — missing `bot_id` / `lichess_token` / `game_id`, or unknown `bot_id`
+**`401 Unauthorized`**
+**`502 Bad Gateway`** — the Lichess game stream could not be started (unknown game id, revoked token, Lichess unreachable)
+
+---
+
+## POST /external/lichess/challenge
+
+Create a Lichess game by **challenging an opponent**, then drive + mirror it exactly like
+`POST /external/lichess`. The opponent is either a Lichess username (challenge that user/bot
+— the game starts once they accept) or the literal `"ai"` (play Lichess's Stockfish — the
+game starts immediately). Returns the watchable maichess `match_id`.
+
+Clock fields are in **seconds** (Lichess's challenge API unit). The bot account behind
+`lichess_token` must have the `challenge:write` scope (plus `bot:play`).
+
+**Auth:** Bearer token
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `bot_id` | string | Yes | Maichess bot to play (from `GET /bots`) |
+| `lichess_token` | string | Yes | Lichess bot-account OAuth token (bearer) |
+| `opponent` | string | Yes | Lichess username to challenge, or `"ai"` for Stockfish |
+| `level` | integer | No | Stockfish level 1–8 (only when `opponent` is `"ai"`; default 1) |
+| `clock_limit` | integer | No | Base time in **seconds** (default 300) |
+| `clock_increment` | integer | No | Increment per move in **seconds** (default 0) |
+| `rated` | boolean | No | Rated on Lichess (ignored for `"ai"`; default false) |
+
+```json
+{ "bot_id": "blitz-enhanced-3", "lichess_token": "lip_xxx", "opponent": "ai", "level": 4, "clock_limit": 300, "clock_increment": 2 }
+```
+
+**`200 OK`** — same shape as `POST /external/lichess` (`{ "match_id": "...", "provider": "lichess" }`)
+
+**`400 Bad Request`** — missing `bot_id` / `lichess_token` / `opponent`, or unknown `bot_id`
+**`401 Unauthorized`**
+**`502 Bad Gateway`** — the challenge could not be created, or the game never started (e.g. a user challenge that was not accepted)

@@ -192,4 +192,11 @@ message MatchEnded {
   // the unknown-bot rating of 0).
   optional double white_bot_elo = 7;
   optional double black_bot_elo = 8;
+  // Final clocks and board position at match end, snapshotted from the live
+  // read model so consumers can record the finished game (e.g. the bot arena's
+  // clock/material tie-breaks) without a synchronous GetMatch read. Zero/empty
+  // for events written before these fields existed.
+  int64 white_time_ms = 9;
+  int64 black_time_ms = 10;
+  string final_fen = 11;
 }

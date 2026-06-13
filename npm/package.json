@@ -1,6 +1,6 @@
 {
   "name": "@maichess/platform-protos",
-  "version": "0.3.2",
+  "version": "0.11.0",
   "description": "Generated TypeScript/gRPC client stubs for maichess services",
   "files": [
     "**/*.js",

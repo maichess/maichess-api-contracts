@@ -280,6 +280,79 @@ match end is applied asynchronously and delivered over the socket as a `match_en
 
 ---
 
+## GET /leaderboard
+
+Ranked list of players by Glicko-2 rating, highest first. Served from a Redis sorted set
+(`leaderboard:rating`) maintained from the rating event stream — ranked reads are O(log N)
+with no database scan. Flagged players (anti-cheat) are excluded; provisional ratings (still
+high deviation) are annotated but included.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `limit` | integer | No | Number of entries to return, 1–200 (default: 50) |
+
+**`200 OK`**
+```json
+{
+  "entries": [
+    {
+      "rank": 1,
+      "user_id": "3f2504e0-...",
+      "username": "alice",
+      "elo": 1842,
+      "rating_deviation": 58.3,
+      "provisional": false
+    }
+  ],
+  "total": 1273
+}
+```
+
+`rank` is the 1-based position in the full board (so the list may skip ranks where flagged
+players are hidden). `elo` is the Glicko-2 rating rounded. `provisional` is `true` while the
+rating deviation is still high (a new or inactive account). `username` is omitted if not yet
+known. `total` is the number of rated players on the board (independent of `limit`).
+
+**`401 Unauthorized`**
+
+---
+
+## GET /leaderboard/rank/{user_id}
+
+The given user's own position on the leaderboard (ZREVRANK), without fetching the whole list.
+
+**Auth:** Bearer token
+
+**Path parameters**
+
+| Name | Type | Description |
+|---|---|---|
+| `user_id` | UUID | The user whose rank to look up |
+
+**`200 OK`**
+```json
+{
+  "entry": {
+    "rank": 312,
+    "user_id": "3f2504e0-...",
+    "username": "alice",
+    "elo": 1421,
+    "rating_deviation": 72.0,
+    "provisional": false
+  },
+  "total": 1273
+}
+```
+
+**`401 Unauthorized`**
+**`404 Not Found`** — the user is not on the board (no rated game yet)
+
+---
+
 ## External match fields
 
 Match summaries and full match objects include the following fields for external-game support:

@@ -20,7 +20,10 @@ Three setup types:
   aggregate clock advantage → greater aggregate final material → a seeded coin
   flip. Non-power-of-2 fields receive byes.
 - **matrix** — round-robin: every unordered bot pair plays, for each FEN,
-  `games_per_fen` games with colors always alternating.
+  `games_per_fen` games. `color_mode` decides how colors are assigned to those
+  games: `alternating` swaps colors deterministically per game (default), while
+  `random` assigns each game's colors via the arena RNG. `games_per_fen` is the
+  per-FEN game count in both modes.
 - **single** — one match-up between two bots over a FEN list, `games_per_fen`
   games per FEN, with an optional `keep_switching_colors` toggle.
 
@@ -67,6 +70,7 @@ setup type.
 | `bot_ids` | string[] | Yes | Bots in the round-robin (≥ 2) |
 | `fen_list` | string[] | No | Empty/`["standard"]` ⇒ standard |
 | `games_per_fen` | int | Yes | Games per FEN per pair (≥ 1) |
+| `color_mode` | string | No | `alternating` (default) or `random` |
 | `time_format_id` | string | Yes | Time-format id |
 
 `single`:

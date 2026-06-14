@@ -78,14 +78,29 @@ message TournamentConfig {
   maichess.match_manager.v1.TimeFormat time_format = 5;
 }
 
+// MatrixColorMode controls how colors are assigned to a matrix pairing's games.
+enum MatrixColorMode {
+  MATRIX_COLOR_MODE_UNSPECIFIED = 0;
+  // Colors alternate deterministically per game within a pairing (default).
+  MATRIX_COLOR_MODE_ALTERNATING = 1;
+  // Colors are assigned randomly per game via the arena's RNG.
+  MATRIX_COLOR_MODE_RANDOM = 2;
+}
+
 // MatrixConfig plays a round-robin: every unordered bot pair plays, for each
-// FEN, `games_per_fen` games with colors always alternating.
+// FEN, `games_per_fen` games. `color_mode` decides how colors are assigned to
+// those games: ALTERNATING swaps colors deterministically per game within a
+// pairing (the default); RANDOM assigns each game's colors via the arena RNG.
+// `games_per_fen` is the per-FEN game count in both modes — balanced color
+// coverage in ALTERNATING mode comes from an even `games_per_fen`.
 message MatrixConfig {
   repeated string bot_ids = 1;
   // Empty or ["standard"] means the standard start position.
   repeated string fen_list = 2;
   int32 games_per_fen = 3;
   maichess.match_manager.v1.TimeFormat time_format = 4;
+  // Defaults to ALTERNATING on UNSPECIFIED.
+  MatrixColorMode color_mode = 5;
 }
 
 // SingleConfig is one match-up between two bots over a FEN list.

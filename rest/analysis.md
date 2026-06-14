@@ -126,10 +126,15 @@ Import a game from PGN and save it.
 
 ### POST /games/from-match/{match_id}
 
-Import a finished match from match-db as a saved analysis game. The match must have ended.
-Duplicates are allowed — the user may import the same match multiple times.
+Import a match from match-db as a saved analysis game. The match may be **finished or
+ongoing**: an ongoing match is imported as a snapshot of its moves so far (a partial move
+list, `result` `*`), letting a player jump into analysis without waiting for the game to
+end. The import is a point-in-time copy — it is not kept in sync as the live game
+continues; re-import to capture later moves. Duplicates are allowed — the user may import
+the same match multiple times.
 
-**Auth:** Bearer token — must be a participant of the match
+**Auth:** Bearer token — must be a participant of the match (or its `created_by`, which
+covers bot-vs-bot games the user spawned)
 
 **Path parameters**
 
@@ -139,9 +144,8 @@ Duplicates are allowed — the user may import the same match multiple times.
 
 **`201 Created`** — returns the full game object (same schema as `GET /games/{id}`)
 
-**`400 Bad Request`** — match is still ongoing
 **`401 Unauthorized`**
-**`403 Forbidden`** — user was not a participant
+**`403 Forbidden`** — user was not a participant or initiator
 **`404 Not Found`** — match does not exist
 
 ---
@@ -170,7 +174,9 @@ starting position; whatif moves can be explored once a session is opened.
 
 ### GET /matches
 
-List the authenticated user's finished matches sourced directly from match-db. Used by the analysis client so a player can pick a past game to review without pasting an ID. The analysis service reads `matches` straight from the database — it does **not** proxy through Match Manager.
+List the authenticated user's matches sourced directly from match-db. Used by the analysis client so a player can pick a game to review without pasting an ID. The analysis service reads `matches` straight from the database — it does **not** proxy through Match Manager.
+
+By default only **finished** matches are returned. The `status` filter additionally surfaces the user's **ongoing** games so they can be opened for review while still in progress (see `POST /games/from-match/{match_id}`, which now accepts ongoing matches). Ongoing rows carry `status` `ongoing` and `finished_at_ms` `0`.
 
 **Auth:** Bearer token
 
@@ -178,6 +184,7 @@ List the authenticated user's finished matches sourced directly from match-db. U
 
 | Name | Type | Required | Description |
 |---|---|---|---|
+| `status` | string | No | `finished` (default), `ongoing`, or `all`. |
 | `page` | integer | No | 1-based page number (default: 1) |
 | `page_size` | integer | No | Results per page, max 100 (default: 20) |
 
@@ -201,8 +208,9 @@ List the authenticated user's finished matches sourced directly from match-db. U
 }
 ```
 
-Matches are returned newest first by `last_move_at`. Only matches the authenticated user participated in (as `white.user_id` or `black.user_id`) are included; ongoing matches are not. Each row's `match_id` can be passed to `POST /games/from-match/{match_id}` to import the game for analysis.
+Matches are returned newest first by `last_move_at`. Only matches the authenticated user participated in (as `white.user_id` or `black.user_id`) are included. Ongoing matches are excluded unless `status` is `ongoing` or `all`. Each row's `match_id` can be passed to `POST /games/from-match/{match_id}` to import the game for analysis.
 
+**`400 Bad Request`** — invalid `status`
 **`401 Unauthorized`**
 
 ---

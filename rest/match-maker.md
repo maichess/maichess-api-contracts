@@ -68,15 +68,30 @@ Enter the matchmaking queue.
 | `opponent.type` | string | Yes | `human` or `bot` |
 | `opponent.bot_id` | string | Conditional | Required when `opponent.type` is `bot` |
 | `allow_flagged` | boolean | No | Allow being matched with players previously flagged by anti-cheat. Default `false` (disallow). Ignored for bot opponents. |
+| `color_preference` | string | No | Requested side: `white`, `black`, or `any` (default). For a bot opponent, `random` is accepted as a synonym for `any`. |
 
 Human opponent:
 ```json
 {
   "time_format_id": "5+0",
   "opponent": { "type": "human" },
-  "allow_flagged": false
+  "allow_flagged": false,
+  "color_preference": "any"
 }
 ```
+
+**Color preference (matchmaking).** `color_preference` is resolved entirely inside
+Match Maker — the colors are decided before the match is created, so no other service
+or contract is affected:
+
+- Two players who both want `any` are assigned colors as before (the longest-waiting
+  player takes White).
+- One side fixed, the other `any` → the fixed side gets its color.
+- Opposite fixed colors → the ideal pairing; each gets their wish.
+- Both fixed on the **same** color → still pairable; a coin flip decides who concedes.
+
+Color preference never affects *whether* two players are paired (time control, skill,
+and the anti-cheat filter decide that) — only which side each takes once paired.
 
 `allow_flagged` is a per-search matchmaking *filter*, not a ban: a pair is admissible
 only if neither side is anti-cheat-flagged from the other's perspective — i.e. a flagged
@@ -89,9 +104,14 @@ Bot opponent:
 ```json
 {
   "time_format_id": "10+5",
-  "opponent": { "type": "bot", "bot_id": "stockfish-3" }
+  "opponent": { "type": "bot", "bot_id": "stockfish-3" },
+  "color_preference": "random"
 }
 ```
+
+For a bot opponent `color_preference` sets the **human's** side: `white`/`black` place
+the human on that side; `any`/`random` coin-flip the human's color. The match is created
+immediately with the resolved sides.
 
 **`201 Created`**
 ```json

@@ -13,6 +13,7 @@ This repository holds the Protobuf API contracts for the **maichess** project �
 - **user-service** — user management (`protos/user-service/v1/*`)
 - **auth-service** — authentication (`protos/auth-service/v1/*`)
 - **analysis-service** — game analysis streaming and saved game management (`protos/analysis-service/v1/*`)
+- **insights-service** — historical-corpus analytics via Apache Spark; control plane + query API (`protos/insights-service/v1/*`)
 
 Proto files live under `protos/<service-name>/v1/`.
 

@@ -30,6 +30,7 @@ buf.gen.ts.yaml                 # Generate TypeScript only (used by CI)
 | match-manager-service | `protos/match-manager-service/v1/` | Match management |
 | user-service | `protos/user-service/v1/` | User management |
 | auth-service | `protos/auth-service/v1/` | Authentication |
+| insights-service | `protos/insights-service/v1/` | Historical-corpus analytics (Spark) |
 
 ---
 

@@ -21,6 +21,7 @@ protos/events/v1/
   user_events.proto
   socket_outbound.proto      # fan-out envelope for client push
   cheat_events.proto         # anti-cheat flag state per user
+  insights_events.proto      # insights Spark job lifecycle (relayed to socket.outbound.v1)
 ```
 
 > **CDC streams** `user.cdc.v1` / `match.cdc.v1` (Debezium, see

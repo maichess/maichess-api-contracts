@@ -1,0 +1,371 @@
+syntax = "proto3";
+
+package maichess.insights.v1;
+
+option csharp_namespace = "Maichess.Insights.V1";
+option java_multiple_files = true;
+option java_package = "maichess.insights.v1.insights";
+
+// Insights analyzes massive historical chess corpora (Lichess monthly dumps and
+// manual PGN uploads first; Chess.com / TWIC later) with Apache Spark on k8s.
+// Each analyzed dataset is a "corpus" identified by a corpus_id; every metric is
+// computed per corpus so results from different sources/slices never blur.
+//
+// Two halves: job control (submit/track Spark ingestion + analysis runs) and
+// queries (read the materialized insights_* collections). The Scala Spark module
+// writes the metric rows; this .NET control plane reads them via database-service
+// gRPC and submits/monitors SparkApplication CRDs. The canonical external surface
+// is the REST API in rest/insights.md; this service definition is the source of
+// truth for the data model and operations. See
+// knowledge/domain/insights-statistics.md for the metric definitions.
+service Insights {
+  // SubmitIngestion downloads + parses a source into a new corpus of partitioned
+  // Parquet, recording an ingestion Job. The filter (rating band, time control,
+  // date slice, sample rate) is applied during parse; default ingestion is
+  // filtered/sampled and full-month runs are explicit opt-in.
+  rpc SubmitIngestion(SubmitIngestionRequest) returns (SubmitIngestionResponse);
+
+  // SubmitAnalysis runs the requested analysis jobs over an already-ingested
+  // corpus, materializing the insights_* rows. Recorded as an analysis Job.
+  rpc SubmitAnalysis(SubmitAnalysisRequest) returns (SubmitAnalysisResponse);
+
+  // GetJob returns one job record (status, timestamps, backing SparkApplication).
+  rpc GetJob(GetJobRequest) returns (GetJobResponse);
+
+  // ListJobs returns job records, optionally filtered by status, newest first.
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse);
+
+  // ListCorpora returns the analyzed corpora, newest first.
+  rpc ListCorpora(ListCorporaRequest) returns (ListCorporaResponse);
+
+  // GetCorpusSummary returns the headline aggregates for one corpus.
+  rpc GetCorpusSummary(GetCorpusSummaryRequest) returns (GetCorpusSummaryResponse);
+
+  // GetTopOpenings returns opening-success rows for a corpus, most popular first.
+  rpc GetTopOpenings(GetTopOpeningsRequest) returns (GetTopOpeningsResponse);
+
+  // GetCommonEndgames returns endgame material-signature rows, most frequent first.
+  rpc GetCommonEndgames(GetCommonEndgamesRequest) returns (GetCommonEndgamesResponse);
+
+  // GetCommonPositions returns the most-reached normalized positions.
+  rpc GetCommonPositions(GetCommonPositionsRequest) returns (GetCommonPositionsResponse);
+
+  // GetTrickyPositions returns positions with both high average centipawn loss
+  // and high think time — where humans most often blunder under pressure.
+  rpc GetTrickyPositions(GetTrickyPositionsRequest) returns (GetTrickyPositionsResponse);
+}
+
+// ─── Sources, filters, jobs ──────────────────────────────────────────────────
+
+// IngestionSource identifies where a corpus's games come from. Pluggable: only
+// Lichess + manual upload ship first; future sources add a new oneof arm.
+message IngestionSource {
+  oneof source {
+    LichessMonth lichess_month = 1;
+    PgnUpload upload = 2;
+  }
+}
+
+// LichessMonth is one monthly standard-games dump from database.lichess.org.
+message LichessMonth {
+  // Dump month, "YYYY-MM" (e.g. "2024-12").
+  string year_month = 1;
+}
+
+// PgnUpload is a manually uploaded multi-game PGN already staged in MinIO.
+message PgnUpload {
+  // MinIO object key of the uploaded PGN in the insights-raw bucket.
+  string object_key = 1;
+  // Optional human label for the upload (shown in the corpus list).
+  string label = 2;
+}
+
+// CorpusFilter narrows the games an ingestion keeps. Empty fields mean "all";
+// it is recorded on the corpus so a slice is always reproducible.
+message CorpusFilter {
+  // Rating band, e.g. "1600-1999"; empty = all bands.
+  string rating_band = 1;
+  // Time-control class, e.g. "blitz"; empty = all.
+  string time_control = 2;
+  // Inclusive event-date slice within the source (epoch ms); 0 = unbounded.
+  int64 date_from_ms = 3;
+  int64 date_to_ms = 4;
+  // Fraction of games to keep, in (0,1]; 0 or 1 means the full corpus.
+  double sample_rate = 5;
+}
+
+// JobType distinguishes the two pipeline stages a Job can record.
+enum JobType {
+  JOB_TYPE_UNSPECIFIED = 0;
+  JOB_TYPE_INGESTION = 1;
+  JOB_TYPE_ANALYSIS = 2;
+}
+
+// JobStatus is the lifecycle of a Spark job as tracked by the control plane.
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  JOB_STATUS_PENDING = 1;
+  JOB_STATUS_RUNNING = 2;
+  JOB_STATUS_SUCCEEDED = 3;
+  JOB_STATUS_FAILED = 4;
+}
+
+// AnalysisKind selects which analysis job(s) an analysis run computes. Each maps
+// to one insights_* collection.
+enum AnalysisKind {
+  ANALYSIS_KIND_UNSPECIFIED = 0;
+  ANALYSIS_KIND_OPENINGS = 1;
+  ANALYSIS_KIND_ENDGAMES = 2;
+  ANALYSIS_KIND_POSITIONS = 3;
+  ANALYSIS_KIND_TRICKY = 4;
+  ANALYSIS_KIND_SUMMARY = 5;
+}
+
+// Job is one ingestion or analysis run, recorded in insights_jobs and read by the
+// control plane to track and list work.
+message Job {
+  string id = 1;
+  JobType type = 2;
+  // Corpus this job produces (ingestion) or reads (analysis).
+  string corpus_id = 3;
+  // Set on ingestion jobs; describes the source that produced the corpus.
+  IngestionSource source = 4;
+  // The filter applied at ingestion (recorded on both job types for provenance).
+  CorpusFilter filter = 5;
+  JobStatus status = 6;
+  // The analysis jobs requested; empty for ingestion jobs.
+  repeated AnalysisKind analysis_kinds = 7;
+  int64 created_at_ms = 8;
+  // 0 until the SparkApplication starts running.
+  int64 started_at_ms = 9;
+  // 0 until the job reaches a terminal state.
+  int64 finished_at_ms = 10;
+  // Name of the SparkApplication / ScheduledSparkApplication CR backing this job.
+  string spark_application = 11;
+  // Populated when status is FAILED; empty otherwise.
+  string error = 12;
+}
+
+// Corpus is one analyzed dataset: a source + filter producing a set of games that
+// every metric is computed over.
+message Corpus {
+  // e.g. "lichess-2024-12" or "lichess-2024-12-blitz-1600plus" or "upload-{id}".
+  string id = 1;
+  IngestionSource source = 2;
+  CorpusFilter filter = 3;
+  // Games retained after filtering.
+  int64 game_count = 4;
+  int64 created_at_ms = 5;
+}
+
+// ─── Metric rows (mirror knowledge/domain/insights-statistics.md) ────────────
+
+// OpeningRow is one opening-success row (insights_openings), grouped by ECO and
+// optionally split by color / rating band / time control.
+message OpeningRow {
+  string eco = 1;
+  string opening_name = 2;
+  int64 game_count = 3;
+  double white_win_rate = 4;
+  double black_win_rate = 5;
+  double draw_rate = 6;
+  // Split dimensions; empty when this row is not split on that dimension.
+  string color = 7;
+  string rating_band = 8;
+  string time_control = 9;
+  // Popularity & success trend across the corpus's months.
+  repeated OpeningTrendPoint trend = 10;
+}
+
+// OpeningTrendPoint is one month's popularity + success for an opening.
+message OpeningTrendPoint {
+  // "YYYY-MM".
+  string year_month = 1;
+  int64 game_count = 2;
+  double white_win_rate = 3;
+  double black_win_rate = 4;
+  double draw_rate = 5;
+}
+
+// EndgameRow is one endgame material-signature row (insights_endgames). A
+// position is an endgame when total piece count <= 7; the signature is the
+// multiset of non-king pieces per side, canonical, stronger side first
+// (e.g. "KRPvKR", "KQvKR", "KBNvK").
+message EndgameRow {
+  string material_signature = 1;
+  int64 frequency = 2;
+  // Result tendency from the stronger side's perspective; the three sum to ~1.
+  double stronger_side_win_rate = 3;
+  double draw_rate = 4;
+  double stronger_side_loss_rate = 5;
+}
+
+// PositionRow is one most-reached normalized-FEN row (insights_positions). The
+// FEN has the halfmove-clock and fullmove-number fields stripped so transpositions
+// and clock differences collapse.
+message PositionRow {
+  string normalized_fen = 1;
+  int64 reach_count = 2;
+  double white_win_rate = 3;
+  double black_win_rate = 4;
+  double draw_rate = 5;
+}
+
+// TrickyRow is one tricky-position row (insights_tricky): reached often enough
+// (support) with both high average centipawn loss and high think time.
+message TrickyRow {
+  string normalized_fen = 1;
+  // Times the position was reached (min-support gated).
+  int64 support = 2;
+  // Average centipawn loss of the move actually played (White's perspective).
+  double avg_centipawn_loss = 3;
+  // Fraction of plays that lose at least the blunder threshold (e.g. >=300cp).
+  double blunder_probability = 4;
+  // Average think time spent on the move, ms (from %clk deltas + increment).
+  double avg_think_time_ms = 5;
+}
+
+// CorpusSummary is the headline aggregate per corpus (insights_summary).
+message CorpusSummary {
+  string corpus_id = 1;
+  int64 total_games = 2;
+  // Earliest / latest game date in the corpus, "YYYY-MM" or ISO date.
+  string date_from = 3;
+  string date_to = 4;
+  double draw_rate = 5;
+  double avg_ply_count = 6;
+  // Game count per rating band.
+  repeated RatingBandCount rating_distribution = 7;
+  // Game count per termination kind (mate / resign / timeout / other).
+  repeated TerminationCount termination_mix = 8;
+  // Game count per opening first move (SAN), most popular first.
+  repeated FirstMoveCount first_moves = 9;
+}
+
+message RatingBandCount {
+  string rating_band = 1;
+  int64 game_count = 2;
+}
+
+message TerminationCount {
+  // e.g. "mate", "resign", "timeout", "other".
+  string termination = 1;
+  int64 game_count = 2;
+}
+
+message FirstMoveCount {
+  // First move in SAN, e.g. "e4".
+  string san = 1;
+  int64 game_count = 2;
+}
+
+// ─── Requests / responses ────────────────────────────────────────────────────
+
+message SubmitIngestionRequest {
+  IngestionSource source = 1;
+  // Optional; an empty filter ingests the full source.
+  CorpusFilter filter = 2;
+}
+
+message SubmitIngestionResponse {
+  Job job = 1;
+}
+
+message SubmitAnalysisRequest {
+  string corpus_id = 1;
+  // Which analysis jobs to run; empty means all kinds.
+  repeated AnalysisKind kinds = 2;
+}
+
+message SubmitAnalysisResponse {
+  Job job = 1;
+}
+
+message GetJobRequest {
+  string id = 1;
+}
+
+message GetJobResponse {
+  Job job = 1;
+}
+
+message ListJobsRequest {
+  // UNSPECIFIED returns all statuses.
+  JobStatus status = 1;
+  // Defaults to 20 when 0; capped at 100.
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListJobsResponse {
+  repeated Job jobs = 1;
+}
+
+message ListCorporaRequest {
+  // Defaults to 20 when 0; capped at 100.
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListCorporaResponse {
+  repeated Corpus corpora = 1;
+}
+
+message GetCorpusSummaryRequest {
+  string corpus_id = 1;
+}
+
+message GetCorpusSummaryResponse {
+  CorpusSummary summary = 1;
+}
+
+message GetTopOpeningsRequest {
+  string corpus_id = 1;
+  // Optional split filters; empty returns the un-split aggregate rows.
+  string color = 2;
+  string rating_band = 3;
+  string time_control = 4;
+  // Defaults to 50 when 0; capped at 500.
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message GetTopOpeningsResponse {
+  repeated OpeningRow openings = 1;
+}
+
+message GetCommonEndgamesRequest {
+  string corpus_id = 1;
+  // Defaults to 50 when 0; capped at 500.
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetCommonEndgamesResponse {
+  repeated EndgameRow endgames = 1;
+}
+
+message GetCommonPositionsRequest {
+  string corpus_id = 1;
+  // When true, exclude positions still inside opening book (early plies) to
+  // surface middlegame convergence.
+  bool exclude_book = 2;
+  // Defaults to 50 when 0; capped at 500.
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message GetCommonPositionsResponse {
+  repeated PositionRow positions = 1;
+}
+
+message GetTrickyPositionsRequest {
+  string corpus_id = 1;
+  // Defaults to 50 when 0; capped at 500.
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetTrickyPositionsResponse {
+  repeated TrickyRow positions = 1;
+}

@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package maichess.events.v1;
+
+option csharp_namespace = "Maichess.Events.V1";
+option java_multiple_files = true;
+option java_package = "maichess.events.v1";
+
+// Value schema for the insights.events.v1 topic. Insights job-lifecycle events
+// emitted by maichess-insights-service as a SparkApplication advances, so the
+// client can show live job progress instead of polling GET /insights/jobs. The
+// socket service relays these to socket.outbound.v1 for the submitting user; the
+// durable job record still lives in insights_jobs (read via database-service).
+//
+// Same envelope idiom as the other event topics (see events/README.md): a header
+// followed by a oneof payload. aggregate_id is the jobId.
+message InsightsJobEvent {
+  string event_id = 1;
+  // e.g. insights.JobSucceeded
+  string event_type = 2;
+  // jobId
+  string aggregate_id = 3;
+  int64 sequence = 4;
+  // epoch ms
+  int64 occurred_at = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  string producer = 8;
+  oneof payload {
+    JobSubmitted job_submitted = 9;
+    JobRunning job_running = 10;
+    JobSucceeded job_succeeded = 11;
+    JobFailed job_failed = 12;
+  }
+}
+
+// JobKind mirrors insights.v1 JobType for the event stream: an ingestion (parse
+// to Parquet) or an analysis (materialize insights_* rows) run.
+enum JobKind {
+  JOB_KIND_UNSPECIFIED = 0;
+  JOB_KIND_INGESTION = 1;
+  JOB_KIND_ANALYSIS = 2;
+}
+
+// JobSubmitted — a job was accepted and a SparkApplication created (status
+// PENDING). Carries the corpus the job targets.
+message JobSubmitted {
+  string job_id = 1;
+  JobKind kind = 2;
+  string corpus_id = 3;
+  // The submitting user, for direct socket fan-out.
+  string user_id = 4;
+}
+
+// JobRunning — the SparkApplication's driver started (status RUNNING).
+message JobRunning {
+  string job_id = 1;
+  string corpus_id = 2;
+  string user_id = 3;
+}
+
+// JobSucceeded — the job reached a successful terminal state. For analysis jobs
+// the insights_* rows are now queryable.
+message JobSucceeded {
+  string job_id = 1;
+  string corpus_id = 2;
+  string user_id = 3;
+}
+
+// JobFailed — the job reached a failed terminal state.
+message JobFailed {
+  string job_id = 1;
+  string corpus_id = 2;
+  string user_id = 3;
+  string message = 4;
+}

@@ -169,7 +169,7 @@ Get a collection with its resolved config, live progress, and typed result view.
       "bot_a_id": "bullet", "bot_b_id": "blitz",
       "bot_a_score": 2.5, "bot_b_score": 1.5,
       "games": [
-        { "match_id": "…", "fen": "…", "fen_label": "Standard", "white_bot_id": "bullet", "black_bot_id": "blitz", "result": "white_won", "order": 0 }
+        { "match_id": "…", "fen": "…", "fen_label": "Standard", "white_bot_id": "bullet", "black_bot_id": "blitz", "result": "white_won", "order": 0, "status": "finished" }
       ]
     }
   }
@@ -183,7 +183,7 @@ The `result` object holds exactly one of `bracket` (tournament), `matrix_table`
 - **matrix_table**: `{ "bot_ids": [...], "cells": [{ "bot_a_id", "bot_b_id", "bot_a_score", "bot_b_score" }], "games": [GameResult] }`
 - **single_series**: `{ "bot_a_id", "bot_b_id", "bot_a_score", "bot_b_score", "games": [GameResult] }`
 
-A `GameResult` is `{ "match_id", "fen", "fen_label", "white_bot_id", "black_bot_id", "result", "order" }` where `result` is one of `ongoing` \| `white_won` \| `black_won` \| `draw`.
+A `GameResult` is `{ "match_id", "fen", "fen_label", "white_bot_id", "black_bot_id", "result", "order", "status" }` where `result` is one of `ongoing` \| `white_won` \| `black_won` \| `draw`, and `status` is the arena scheduler state of the game — one of `pending` (queued behind the global concurrency limit) \| `running` (in flight) \| `finished`. `result` stays `ongoing` for both pending and running games, so `status` is what distinguishes a queued game from one that is actually playing.
 
 **`401 Unauthorized`**
 **`404 Not Found`** — no collection with that id
@@ -207,7 +207,9 @@ a single global value shared by all users.
 ## PUT /concurrency-limit
 
 Set the global concurrency limit. Editable by any authenticated user (not
-per-user). The scheduler picks up the new value for subsequent launches.
+per-user). **Raising** the limit immediately launches queued games up to the new
+cap (oldest collection first); **lowering** it launches nothing and lets
+in-flight games drain naturally until the running count is back within the cap.
 
 **Request body**
 ```json

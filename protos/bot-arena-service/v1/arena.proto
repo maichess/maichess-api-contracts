@@ -156,6 +156,18 @@ message CollectionProgress {
   int32 pending_games = 4;
 }
 
+// ArenaGameStatus is the arena scheduler state of one game, distinct from the
+// match result: a game can be queued behind the global concurrency cap
+// (PENDING), in flight (RUNNING), or done (FINISHED). It lets the client show a
+// queued game as "pending" and only a launched one as "live" — `result` stays
+// MATCH_STATUS_ONGOING for both pending and running games.
+enum ArenaGameStatus {
+  ARENA_GAME_STATUS_UNSPECIFIED = 0;
+  ARENA_GAME_STATUS_PENDING = 1;
+  ARENA_GAME_STATUS_RUNNING = 2;
+  ARENA_GAME_STATUS_FINISHED = 3;
+}
+
 // GameResult is one finished (or in-flight) game within a collection, carrying
 // the metadata needed to render trees / matrices / lists.
 message GameResult {
@@ -170,6 +182,9 @@ message GameResult {
   maichess.match_manager.v1.MatchStatus result = 6;
   // 0-based position of this game in the collection's expanded game order.
   int32 order = 7;
+  // Arena scheduler state: distinguishes a queued (pending) game from one that
+  // is actually playing (running), which `result` alone cannot.
+  ArenaGameStatus status = 8;
 }
 
 // TournamentBracket renders the rounds of a single-elimination bracket.

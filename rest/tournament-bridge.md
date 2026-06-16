@@ -66,6 +66,7 @@ Create a tournament on the target server. The authenticated user becomes the dir
 | `format` | string | No | `swiss` (default), `singleElimination`, `doubleElimination`, `groupStage`, `league`, `randomKnockout` |
 | `startPosition` | string | No | FEN or `standard` (default) |
 | `opening` | string | No | Key of a named opening (see `GET /openings`). Takes precedence over `startPosition` |
+| `openings` | string | No | Comma-separated opening keys forming a thematic book. Each pairing plays every listed position twice with reversed colours (`matchesPerPairing` becomes `2 * openings`). Takes precedence over `opening`/`startPosition` |
 | `matchesPerPairing` | integer | No | Games per pairing (default: 1) |
 | `groupSize` | integer | No | Required when format is `groupStage` |
 | `maxConcurrentGames` | integer | No | Max games active at once per round; extras stay pending. Omit for unlimited |
@@ -350,6 +351,76 @@ Proxies the tournament server's opening catalog.
 ```
 
 **`502 Bad Gateway`** — tournament server unreachable
+
+---
+
+## GET /registry
+
+List maichess bots permanently registered in the target server's bot registry.
+Each entry is annotated with the matching maichess `bot_id` (by name) when one exists.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `server` | string | No | Tournament server URL |
+
+**`200 OK`**
+```json
+{
+  "bots": [
+    { "id": "bot_ab12cd34", "name": "Enhanced Blitz L3", "maichess_bot_id": "blitz-enhanced-3" }
+  ]
+}
+```
+
+**`502 Bad Gateway`** — tournament server unreachable
+
+---
+
+## POST /registry
+
+Permanently register a maichess bot in the target server's bot registry so it can be
+reused across tournaments. The registry id is auth-backed, so the bridge can drive the
+bot's moves once it joins a tournament. Idempotent by bot name.
+
+**Auth:** Bearer token
+
+**Request body**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `bot_id` | string | Yes | Maichess bot to register (from `GET /bots`) |
+| `server` | string | No | Tournament server URL (query parameter) |
+
+**`200 OK`**
+```json
+{
+  "id": "bot_ab12cd34",
+  "name": "Enhanced Blitz L3",
+  "maichess_bot_id": "blitz-enhanced-3"
+}
+```
+
+**`400 Bad Request`** — unknown bot
+
+---
+
+## DELETE /registry/{id}
+
+Remove a permanently registered bot from the target server's registry, by its registry id.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `server` | string | No | Tournament server URL |
+
+**`204 No Content`**
 
 ---
 

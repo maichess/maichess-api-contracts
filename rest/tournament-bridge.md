@@ -63,10 +63,12 @@ Create a tournament on the target server. The authenticated user becomes the dir
 | `clockLimit` | integer | Yes | Base time in seconds |
 | `clockIncrement` | integer | Yes | Increment per move in seconds |
 | `rated` | boolean | No | Default: true |
-| `format` | string | No | `swiss` (default), `singleElimination`, `doubleElimination`, `groupStage`, `league` |
+| `format` | string | No | `swiss` (default), `singleElimination`, `doubleElimination`, `groupStage`, `league`, `randomKnockout` |
 | `startPosition` | string | No | FEN or `standard` (default) |
+| `opening` | string | No | Key of a named opening (see `GET /openings`). Takes precedence over `startPosition` |
 | `matchesPerPairing` | integer | No | Games per pairing (default: 1) |
 | `groupSize` | integer | No | Required when format is `groupStage` |
+| `maxConcurrentGames` | integer | No | Max games active at once per round; extras stay pending. Omit for unlimited |
 | `server` | string | No | Tournament server URL |
 
 ```json
@@ -259,6 +261,25 @@ Get standings as JSON (not NDJSON — the bridge collects the stream for the cli
 
 ---
 
+## GET /tournaments/{id}/export
+
+Export all games of the tournament as PGN. Proxies the tournament server's game export.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `server` | string | No | Tournament server URL |
+
+**`200 OK`** — `Content-Type: application/x-chess-pgn`; standard PGN, one game per block
+
+**`404 Not Found`** — tournament not found
+**`502 Bad Gateway`** — tournament server unreachable
+
+---
+
 ## GET /tournaments/{id}/stream
 
 Server-Sent Events (SSE) stream of tournament events. The bridge translates the tournament server's NDJSON stream into SSE for browser consumption.
@@ -302,6 +323,33 @@ List available maichess bots. Proxies to Engine Service `ListBots`.
   ]
 }
 ```
+
+---
+
+## GET /openings
+
+List named starting positions (the built-in opening catalog plus any custom entries)
+from the target server, for use as the `opening` field when creating a tournament.
+Proxies the tournament server's opening catalog.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `server` | string | No | Tournament server URL |
+
+**`200 OK`**
+```json
+{
+  "openings": [
+    { "key": "vienna", "name": "Vienna Opening", "fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2" }
+  ]
+}
+```
+
+**`502 Bad Gateway`** — tournament server unreachable
 
 ---
 

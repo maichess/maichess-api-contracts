@@ -157,13 +157,18 @@ Return the current state of a match. Any authenticated user may read an ongoing 
   "created_by": { "user_id": "3f2504e0-...", "username": "alice" },
   "source": "native",
   "external_provider": "",
-  "analyzable": false
+  "analyzable": false,
+  "clock_history": [
+    { "white_time_ms": 179500, "black_time_ms": 180000 }
+  ]
 }
 ```
 
 `status` is one of: `ongoing`, `white_won`, `black_won`, `draw`
 
 `last_move_at_ms` is a Unix timestamp in milliseconds indicating when the last move (or match creation) occurred. Combined with `white_time_ms` / `black_time_ms`, clients can compute the active player's current remaining time: `remaining = time_ms - (now - last_move_at_ms)`.
+
+`clock_history` (optional, additive) is the per-move remaining-clock snapshot list, parallel to `moves`: `clock_history[i]` is `{ white_time_ms, black_time_ms }` **after** `moves[i]` (no starting-position entry, so it has the same length as `moves`). `white_time_ms` / `black_time_ms` (the top-level scalars) remain the *current* clocks. `clock_history` is **empty** for matches that predate per-move clock history; clients must treat an empty/absent array as "no clock data" and degrade accordingly (e.g. PGN export without `{[%clk]}` annotations).
 
 `analyzable` is `true` when position navigation is available for this match: either at least one
 side is a bot, or the match has ended. Used by the client to show or hide the "Analyze" button.

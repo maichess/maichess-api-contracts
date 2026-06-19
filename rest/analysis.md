@@ -91,13 +91,25 @@ Return a single saved analysis game including the full move list and PGN.
   ],
   "pgn": "[Event \"World Championship\"] ...",
   "created_at": "2026-04-24T10:30:00Z",
-  "tags": { "Event": "World Championship", "Date": "1972.07.11" }
+  "tags": { "Event": "World Championship", "Date": "1972.07.11" },
+  "clock_history": [
+    { "white_time_ms": 299000, "black_time_ms": 300000 },
+    { "white_time_ms": 299000, "black_time_ms": 298000 }
+  ]
 }
 ```
 
 `moves` is the full UCI move list, oldest first. `fens` is the FEN after each move in the same
 order; `fens[0]` is the position after `moves[0]`. `starting_fen` is the position before any
 moves; for standard games this is always the initial chess position.
+
+`clock_history` (optional, additive) is the per-move remaining-clock snapshot list, parallel to
+`moves`: `clock_history[i]` is `{ white_time_ms, black_time_ms }` **after** `moves[i]` (no
+starting-position entry, so it has the same length as `moves`). It is **empty** when the source
+game carried no clock data — a FEN import, a PGN with no `{[%clk ...]}`/`{[%emt ...]}` comments,
+or a match document that predates per-move clock history. Clients must treat an empty/absent array
+as "no clock data". The generated `pgn` carries the same data as standard `{[%clk H:MM:SS]}` move
+comments when clock data is present.
 
 **`401 Unauthorized`**
 **`403 Forbidden`** — game belongs to another user
@@ -116,6 +128,10 @@ Import a game from PGN and save it.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `pgn` | string | Yes | Full PGN string (single game; multi-game PGN is rejected) |
+
+If the PGN contains per-move `{[%clk H:MM:SS]}` (or `{[%emt ...]}`) clock comments, they are parsed
+into `clock_history` (parallel to the move list); a PGN without them simply yields an empty
+`clock_history`. The original PGN text is stored verbatim.
 
 **`201 Created`** — returns the full game object (same schema as `GET /games/{id}`)
 

@@ -221,6 +221,46 @@ Withdraw the registered bot from the tournament. Only allowed while status is `c
 
 ---
 
+## POST /tournaments/{id}/participants
+
+Add an already permanently-registered bot (see `GET /registry` / `POST /registry`) to
+the tournament by its registry id. Only the director may do this, and only while the
+tournament is in `created` status. The bridge mints a bot token for the registered bot
+(the registry id is auth-backed) and sets up driving, so the bot plays automatically
+once the tournament starts — exactly like `POST /tournaments/{id}/register`, but reusing
+the permanent registry entry (stable id + analytics metadata) instead of an ephemeral
+join.
+
+**Auth:** Bearer token
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `bot_id` | string | Yes | Maichess bot to play (from `GET /bots`) |
+| `registry_id` | string | Yes | Tournament-server registry id of the bot (from `GET /registry`) |
+
+```json
+{ "bot_id": "blitz-enhanced-3", "registry_id": "bot_ab12cd34" }
+```
+
+**`200 OK`**
+```json
+{
+  "registration_id": "reg_abc123",
+  "tournament_id": "t7kXq2",
+  "bot_id": "blitz-enhanced-3",
+  "registry_id": "bot_ab12cd34",
+  "status": "registered"
+}
+```
+
+**`400 Bad Request`** — unknown maichess `bot_id`, or unknown `registry_id`
+**`403 Forbidden`** — caller is not the director of this tournament
+**`409 Conflict`** — bot already registered, or tournament not in `created` status
+
+---
+
 ## GET /tournaments/{id}/rounds/{round}
 
 Get pairings for a round, enriched with match-db match IDs for mirrored games.
@@ -277,6 +317,45 @@ Export all games of the tournament as PGN. Proxies the tournament server's game 
 **`200 OK`** — `Content-Type: application/x-chess-pgn`; standard PGN, one game per block
 
 **`404 Not Found`** — tournament not found
+**`502 Bad Gateway`** — tournament server unreachable
+
+---
+
+## GET /tournaments/{id}/analytics
+
+Proxy the tournament server's **analytics export** — a single, versioned JSON document
+containing every game (UCI moves, winner, termination, timing) and the final standings,
+with per-bot analytics metadata (family / strategy / engine / model version). This is the
+structured data the maichess insights (Spark) pipeline ingests, and what the client's
+tournament analytics view renders. Available only once the tournament is `finished`.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `server` | string | No | Tournament server URL |
+
+**`200 OK`** — `Content-Type: application/json`; the tournament server's `AnalyticsExport`
+document (gate on its `schemaVersion`, currently `"1.0"`, before deserializing).
+
+```json
+{
+  "schemaVersion": "1.0",
+  "tournamentId": "t7kXq2",
+  "format": "swiss",
+  "clock": { "limit": 300, "increment": 3 },
+  "rated": true,
+  "nbRounds": 5,
+  "exportedAt": "2025-06-17T12:31:00Z",
+  "standings": [ { "botId": "bot_abc", "botName": "Engine1", "rank": 1, "points": 3.5, "wins": 3, "draws": 1, "losses": 0, "nbGames": 4, "tieBreak": 9.0 } ],
+  "games": [ { "gameId": "j0nPtcjl", "round": 1, "whiteBotId": "bot_abc", "blackBotId": "bot_xyz", "winner": "white", "terminationReason": "checkmate", "totalPly": 5, "moves": "e2e4 f7f6 d2d4 g7g5 d1h5" } ]
+}
+```
+
+**`404 Not Found`** — tournament not found
+**`409 Conflict`** — tournament not finished yet
 **`502 Bad Gateway`** — tournament server unreachable
 
 ---
@@ -354,6 +433,39 @@ Proxies the tournament server's opening catalog.
 
 ---
 
+## POST /openings
+
+Register a **custom named starting position** (by FEN) on the target server, so it can be
+used as the `opening` (or part of an `openings` book) when creating a tournament. The
+`key` is derived from `name` when omitted; built-in catalog keys are reserved.
+
+**Auth:** Bearer token
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `server` | string | No | Tournament server URL |
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Human-readable opening name |
+| `fen` | string | Yes | FEN of the starting position |
+| `key` | string | No | Explicit key; derived from `name` when omitted |
+
+```json
+{ "name": "London System", "fen": "rnbqkbnr/ppp1pppp/8/3p4/3P1B2/8/PPP1PPPP/RN1QKBNR b KQkq - 2 2" }
+```
+
+**`201 Created`** — the registered `Opening` (`{ "key", "name", "fen" }`)
+
+**`400 Bad Request`** — invalid name or FEN
+**`409 Conflict`** — key already exists (or collides with a reserved catalog key)
+
+---
+
 ## GET /registry
 
 List maichess bots permanently registered in the target server's bot registry.
@@ -385,6 +497,11 @@ Each entry is annotated with the matching maichess `bot_id` (by name) when one e
 Permanently register a maichess bot in the target server's bot registry so it can be
 reused across tournaments. The registry id is auth-backed, so the bridge can drive the
 bot's moves once it joins a tournament. Idempotent by bot name.
+
+The bridge populates the server's analytics-grouping metadata for the registered bot:
+`family` = `"maichess"`, `strategyType` = the engine variant id (the maichess `bot_id`),
+and `engineType` = `"internal"`. These flow through into the tournament's analytics
+export so bots can be grouped/compared by the insights pipeline.
 
 **Auth:** Bearer token
 
